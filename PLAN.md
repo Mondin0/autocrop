@@ -239,7 +239,7 @@ Cada etapa se documenta en una carpeta `plans/NN-nombre/` con dos archivos: `pla
 1. [Matemática del recorte](plans/01-crop/plan.md): contrato de tests e implementación por Muse.
 2. [Detección y selección del sujeto](plans/02-deteccion/plan.md): contrato de detección YOLO y selección por mayor área.
 3. [Procesamiento de imágenes y CLI](plans/03-procesamiento/plan.md): contrato de procesador con EXIF y CLI por carpeta.
-4. Evaluación del pipeline con fotos reales: definir con el flujo completo disponible.
+4. [Evaluación del pipeline con fotos reales](plans/04-evaluacion/plan.md): evidencia sobre 13 fotos y veredicto de cierre del MVP.
 
 
 No escribas todo el proyecto de una sola vez.
