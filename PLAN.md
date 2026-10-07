@@ -59,11 +59,11 @@ Mantener responsabilidades separadas aproximadamente así:
 ```text
 autocrop-ai/
 ├── app/
-│   ├── cli.py                      # previsto, no creado aún
+│   ├── cli.py                      # creado en etapa 03
 │   ├── detector.py
 │   ├── subject.py
 │   ├── crop.py
-│   ├── processor.py                # previsto, no creado aún
+│   ├── processor.py                # creado en etapa 03
 │   └── models.py       # previsto, no creado aún (solo cuando existan tipos compartidos que lo justifiquen)
 ├── plans/              # Por etapa: plans/NN-nombre/{plan.md, registro.md}
 ├── AGENTS.md           # Dinámica Astra/Big Pickle y reglas comunes
@@ -238,7 +238,7 @@ Cada etapa se documenta en una carpeta `plans/NN-nombre/` con dos archivos: `pla
 
 1. [Matemática del recorte](plans/01-crop/plan.md): contrato de tests e implementación por Muse.
 2. [Detección y selección del sujeto](plans/02-deteccion/plan.md): contrato de detección YOLO y selección por mayor área.
-3. Procesamiento de imágenes y CLI: definir después de validar detección y selección.
+3. [Procesamiento de imágenes y CLI](plans/03-procesamiento/plan.md): contrato de procesador con EXIF y CLI por carpeta.
 4. Evaluación del pipeline con fotos reales: definir con el flujo completo disponible.
 
 

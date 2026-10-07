@@ -20,6 +20,22 @@ python3 -m venv .venv
 
 ## Uso
 
+```bash
+python -m app.cli --input ./fotos --output ./output [--ratio 3:2] [--margin 0.15]
+```
+
+- `--input` (requerido): carpeta existente con JPEG (no recursivo; `.jpg`/`.jpeg`
+  insensibles a mayúsculas). Si no existe o no es directorio, falla sin crear nada.
+- `--output` (requerido): se crea si no existe; guarda un JPEG recortado
+  (`quality=95`) por foto con el mismo nombre base.
+- `--ratio W:H` (opcional): proporción fija para todo el lote, p. ej. `3:2`.
+  Ausente: automática por imagen (3:2 horizontal, 2:3 vertical, 1:1 cuadrada).
+- `--margin F` (opcional, default `0.15`): margen finito `>= 0` alrededor del sujeto.
+- El detector es `yolo11n.pt` del directorio actual con `confidence=0.25`.
+- Fotos sin persona, sin recorte válido o ilegibles se copian sin modificar a
+  `output/review/` con el motivo en `output/review.log`; el lote termina en `0`.
+- Archivos no-JPEG se omiten con aviso por consola, sin ir a `output/review/` ni al log.
+
 ```python
 from pathlib import Path
 from PIL import Image, ImageOps
@@ -28,11 +44,11 @@ from app.subject import select_subject
 from app.crop import calculate_crop
 
 detector = YOLODetector(Path("yolo11n.pt"), confidence=0.25)
-image = ImageOps.exif_transpose(Image.open("foto.jpg"))  # el futuro procesador (etapa 03, sin definir) asumirá RGB + orientación EXIF
+image = ImageOps.exif_transpose(Image.open("foto.jpg"))  # el procesador (etapa 03) asume RGB + orientación EXIF
 boxes = detector.detect_people(image.convert("RGB"))
 subject = select_subject(boxes)
 if subject is None:
-    print("sin personas: reservado para output/review/ en la etapa 03")
+    print("sin personas: gestionado por app.processor (etapa 03)")
 else:
     res = calculate_crop(image.width, image.height, subject, (1, 1), 0.15)
 ```
