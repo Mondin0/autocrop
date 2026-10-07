@@ -1,6 +1,6 @@
 # Etapa 02 — Detección y selección del sujeto
 
-Estado: en revisión
+Estado: completada
 
 Dependencias: [etapa 01 completada](../01-crop/plan.md). Implementación: Muse. Revisión: Astra.
 

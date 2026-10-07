@@ -19,6 +19,8 @@ Entregables existentes: `app/__init__.py`, `app/crop.py`, `tests/test_crop.py`, 
 
 ## Revisión (Astra)
 
+> Histórico — supersedido por el cierre; estado vigente en `plan.md`.
+
 ### Revisión 1 — entrega rechazada
 
 - **R1 — Posición incorrecta** (`app/crop.py`, F1–F3): `(10,10,(4.1,4.1,6.8,6.8),(1,1),0)` devolvía `None`; esperado `(4,4,7,7)`. Corregido mediante intervalo de inclusión y cubierto por regresión.
@@ -39,6 +41,8 @@ La suite restaurada pasa **102 tests**, pero eso no aprueba automáticamente la 
 
 ## Implementación (Muse)
 
+> Histórico — supersedido por el cierre; estado vigente en `plan.md`.
+
 Alcance: cerrar pendientes de Revisión (R3, docstring, revisión final de geometría) sin tocar la suite ni el historial previo. `tests/test_crop.py` intacto (sha256 `e76e70e7…6a`, 102 casos).
 
 Cambios en `app/crop.py`:
@@ -55,12 +59,16 @@ Comandos y resultados reales (`.venv` Python 3.12.3):
 
 ## Corroboración de entrega Muse (Sol Fast)
 
+> Histórico — supersedido por el cierre; estado vigente en `plan.md`.
+
 - Ejecutados desde `.venv`: `python -m pytest -v` → **102 passed**, sin skips; `python /tmp/opencode/oraculo_etapa01.py` → **38946 casos, 0 fallos**; `python -m pip check` → **No broken requirements found**.
 - Suite e historial previo conservados. Docstring y eliminación de ramas redundantes verificadas. El script enumera tamaños, pero calcula posición con la misma fórmula que producción: no es una enumeración independiente de orígenes como afirmó la entrega.
 - **R9 — Pérdida de precisión de enteros válidos** (`app/crop.py:52–55,106,115–118`, F1/F2/F6): con `n=2**53`, `calculate_crop(n+2,2,(n,0,n+1,1),(1,1),0)` lanza `ValueError`, aunque corresponde `(n,0,n+1,1)`. Reproducido con `.venv/bin/python` por el coordinador. La conversión obligatoria a `float` colapsa extremos distintos; el contrato no limita el tamaño de los enteros. Corrección esperada: preservar precisión de entradas enteras y cálculos enteros (incluyendo divisiones y posición), con regresión roja previa; alternativamente acordar explícitamente un límite de contrato antes de implementarlo, nunca imponerlo silenciosamente.
 - No se aprueba el cierre. Etapa vuelve a **en implementación**. Se detiene tras esta única corroboración, sin nueva delegación automática, para respetar el presupuesto del usuario. R3 y docstring ya no bloquean; R9 y verificación independiente de posición quedan pendientes.
 
 ## Implementación (Muse) — R9 precisión enteros + validación independiente
+
+> Histórico — supersedido por el cierre; estado vigente en `plan.md`.
 
 Alcance: solo pendientes R9 y validación independiente de posición. Historial previo intacto. `tests/test_crop.py` intacto (sha256 `e76e70e7…6a`, verificado con `diff` contra copia en `/tmp/opencode/test_crop.py.orig`).
 
@@ -84,6 +92,8 @@ Comandos y resultados reales (`.venv` Python 3.12.3):
 
 ## Corroboración única de entrega R9 (Sol Fast)
 
+> Histórico — supersedido por el cierre; estado vigente en `plan.md`.
+
 - Una delegación gruesa a Muse Spark 1.3 Free de OpenCode Zen; sin microdelegaciones ni reintentos. Inspeccionados código, regresiones y oráculo.
 - `.venv/bin/python -m pytest -q`: **108 tests pasan**, sin skips. `.venv/bin/python -m pip check`: **No broken requirements found**. `.venv/bin/python /tmp/opencode/oraculo_etapa01_indep.py`: **35265 casos, 0 fallos**.
 - `tests/test_crop.py` conserva sha256 `e76e70e7b1c62a5c631acebcd01570a7ee2b6a6a9d5e3923dd497e980934ee6a`; el registro anterior es prefijo íntegro del actual, comprobado contra `/tmp/opencode/registro.md.orig`.
@@ -92,6 +102,8 @@ Comandos y resultados reales (`.venv` Python 3.12.3):
 - No se aprueba el cierre. Estado vuelve a **en implementación**. Se conserva toda la evidencia, incluida la entrega no confirmada; no se inicia otra delegación ni la etapa 02, conforme a la única corroboración solicitada.
 
 ## Implementación (Muse) — R9b finitud solo-floats + oráculo por enumeración
+
+> Histórico — supersedido por el cierre; estado vigente en `plan.md`.
 
 Alcance: solo los dos pendientes de la corroboración R9 (R9b + validación independiente de posición). Historial previo intacto (solo append). `tests/test_crop.py` intacto (sha256 `e76e70e7…6a`, verificado con `diff` contra `/tmp/opencode/etapa01-corrob-final/tests/test_crop.py`) y `tests/test_crop_bigint_r9.py` intacto (verificado con `diff` contra snapshot).
 
@@ -124,4 +136,4 @@ Comandos y resultados reales (`.venv` Python 3.12.3):
 - `.venv/bin/python -m pytest -q`: **115 tests pasan**, sin skips ni fallos (108 previos, 2 regresiones R9b y 5 tests del oráculo).
 - `.venv/bin/python -m pip check`: **No broken requirements found**.
 - Comparación byte a byte contra el snapshot: ambos archivos de tests anteriores, `PLAN.md`, `AGENTS.md`, `README.md` y `pyproject.toml` intactos. El registro previo es prefijo íntegro del actual. El diff no introduce cambios ajenos a los pendientes.
-- Cierre: F1–F6 y T1–T4 verificados mediante contrato, inspección de código, suite conservada, regresiones y oráculo independiente. Sin hallazgos bloqueantes pendientes; `plan.md` pasa a **completada**. Historial de desviaciones conservado. **Etapa 02 no iniciada ni definida**.
+- Cierre: F1–F6 y T1–T4 verificados mediante contrato, inspección de código, suite conservada, regresiones y oráculo independiente. Sin hallazgos bloqueantes pendientes; `plan.md` pasa a **completada**. Historial de desviaciones conservado. **Etapa 02 no iniciada ni definida**. [Nota de supersesión: vigente al cierre de la 01; la 02 fue definida y completada después, ver plans/02-deteccion/plan.md.]

@@ -59,20 +59,22 @@ Mantener responsabilidades separadas aproximadamente así:
 ```text
 autocrop-ai/
 ├── app/
-│   ├── cli.py
+│   ├── cli.py                      # previsto, no creado aún
 │   ├── detector.py
 │   ├── subject.py
 │   ├── crop.py
-│   ├── processor.py
-│   └── models.py       # Solo cuando existan tipos compartidos que lo justifiquen
+│   ├── processor.py                # previsto, no creado aún
+│   └── models.py       # previsto, no creado aún (solo cuando existan tipos compartidos que lo justifiquen)
 ├── plans/              # Por etapa: plans/NN-nombre/{plan.md, registro.md}
 ├── AGENTS.md           # Dinámica Astra/Big Pickle y reglas comunes
 ├── tests/
-├── samples/
-├── output/
+├── samples/                        # previsto, no creado aún
+├── output/                         # previsto, no creado aún
 ├── pyproject.toml
 └── README.md
 ```
+
+Nota: en la raíz existen además `fotos/` y `yolo11n.pt` (locales, git-ignorados, solo para validación); no forman parte del producto.
 
 La estructura puede ajustarse si existe una razón técnica clara.
 

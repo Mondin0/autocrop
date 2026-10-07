@@ -22,13 +22,13 @@ python3 -m venv .venv
 
 ```python
 from pathlib import Path
-from PIL import Image
+from PIL import Image, ImageOps
 from app.detector import YOLODetector
 from app.subject import select_subject
 from app.crop import calculate_crop
 
 detector = YOLODetector(Path("yolo11n.pt"), confidence=0.25)
-image = Image.open("foto.jpg")  # la etapa 03 asumirá RGB + orientación EXIF
+image = ImageOps.exif_transpose(Image.open("foto.jpg"))  # el futuro procesador (etapa 03, sin definir) asumirá RGB + orientación EXIF
 boxes = detector.detect_people(image.convert("RGB"))
 subject = select_subject(boxes)
 if subject is None:

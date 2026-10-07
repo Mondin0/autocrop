@@ -16,6 +16,11 @@ Contrato: [plan.md](plan.md). Estado vigente: ver `plan.md`.
 - `tests/test_subject.py` (nuevo, 37 casos) y `tests/test_detector.py`
   (nuevo, 73 casos): backend simulado vía `sys.modules["ultralytics"]`,
   sin pesos reales, red, GPU ni inferencia real.
+  [Nota de corrección M2 (2026-10-07): métrica uniforme
+  `.venv/bin/python -m pytest --collect-only -q` → `test_subject.py: 47`
+  (21 funciones `def test`), `test_detector.py: 65` (39 funciones); total
+  115 + 47 + 65 = 227, cuadra con la suite. Los "37/73" originales usaban
+  otra cuenta; se conservan arriba como historia.]
 - `pyproject.toml`: `dependencies = ["ultralytics", "Pillow"]`.
 - `README.md`: uso de detector + subject + crop, origen/licencia AGPL-3.0 y
   descarga manual explícita de `yolo11n.pt`.
@@ -107,6 +112,53 @@ Contrato: [plan.md](plan.md). Estado vigente: ver `plan.md`.
 - Criterios: F4 cubierto para H1/H2 (retenida inválida con entero enorme →
   `RuntimeError`). F6 real sigue pendiente (pesos + 3 fotos).
 
+### Prueba real F6
+
+- Pesos: `yolo11n.pt` en root del repo (git-ignorado por `*.pt`),
+  descargado explícitamente con `curl -sSL -o yolo11n.pt
+  https://github.com/ultralytics/assets/releases/download/v8.3.0/yolo11n.pt`
+  (fuente oficial Ultralytics, release `v8.3.0` del repo `ultralytics/assets`).
+  Nada descargado desde el adaptador ni desde tests.
+  SHA256: `0ebbc80d4a7680d14987a577cd21342b65ecfd94632bd9a8da63ae6417644ee1`
+  (5613764 bytes).
+- Versiones efectivas: Python 3.12.3, Pillow 12.3.0, ultralytics 8.4.174,
+  torch 2.14.1+cu130. Mismo modelo y `confidence=0.25` en los 3 casos, CPU.
+- Flujo por foto (script `/tmp/opencode/f6_validate.py`, fuera del repo):
+  abrir → `ImageOps.exif_transpose` → `.convert("RGB")` →
+  `YOLODetector(yolo11n.pt, confidence=0.25).detect_people()` →
+  `select_subject()` → `calculate_crop(w, h, sel, (1, 1), 0.15)`.
+  Originales de `fotos/` no movidos ni sobrescritos; anotaciones visuales
+  como archivos NUEVOS en `/tmp/opencode/f6_annot/` (rojo = detectadas,
+  verde = selección, cian = crop 1:1).
+- `fotos/Lone_runner.jpg`: 500×667, 1 persona
+  `[59.4, 242.8, 288.3, 608.0]` (área 83579.6), selección esa misma caja,
+  crop 1:1 m0.15 `(0, 187, 475, 662)`, 2.97 s (primera inferencia, incluye
+  calentamiento). Visual: caja ajustada al corredor, crop lo contiene. OK.
+- `fotos/Group_of_runners_at_the_Vienna_City_Marathon_2026-05.jpg`:
+  960×640, 11 personas (áreas 89637.6 máx … 1967.7 mín), selección
+  `[681.1, 236.8, 907.2, 633.2]` = la de mayor área (corredor en primer
+  plano a la derecha), crop 1:1 m0.15 `(444, 124, 960, 640)`, 0.15 s.
+  Visual: cada caja cae sobre un corredor, selección = mayor área. OK.
+- `fotos/Empty_road_mongolia.jpg`: 960×540, **5 detecciones pese a no
+  haber personas** — FALSOS POSITIVOS registrados, no ocultos: cajas
+  pequeñas sobre objetos/carteles lejanos al borde de la ruta
+  (`[262.1, 308.6, 289.0, 362.3]` área 1442.0,
+  `[10.8, 306.8, 34.2, 368.8]` área 1450.8,
+  `[864.7, 311.2, 882.5, 351.8]` área 722.8,
+  `[505.9, 307.8, 515.0, 328.5]` área 188.0,
+  `[491.7, 304.5, 501.1, 328.6]` área 226.9). Selección por regla de área:
+  `[10.8, 306.8, 34.2, 368.8]`, crop 1:1 m0.15 `(0, 297, 81, 378)`,
+  0.07 s. Según el plan, un falso positivo aislado NO cambia la regla de
+  área ni autoriza heurísticas; la evaluación general de precisión
+  pertenece a la etapa 04.
+- Chequeo visual F6: en los 3 casos dimensiones coinciden con la foto,
+  todas las cajas dentro de límites y selección == caja de mayor área
+  (verificado por script con asserts + inspección de las anotaciones).
+  Las cajas pertenecen al sistema de coordenadas de la fotografía. APROBADO.
+- Bugs: ninguno de escala/carga/filtrado. `app/` y `tests/` intactos.
+  Suite completa tras la prueba: `.venv/bin/python -m pytest` →
+  **227 passed**.
+
 ## Revisión (Astra)
 
 ### Corroboración 1 — suite verde, 2 hallazgos bloqueantes (F4)
@@ -147,3 +199,21 @@ caja `[10**400,…]` y `conf=[10**400]` → ambas `RuntimeError`. Diff mínimo
 `app/subject.py` e historial intactos. H1/H2 cerrados. La etapa queda
 **en revisión** con F6 pendiente (prueba real CPU con `yolo11n.pt` + 3
 fotos del usuario); no se cierra ni se inicia etapa 03.
+
+### Cierre — F6 corroborado, etapa completada
+
+Corroboración propia con `.venv`: `yolo11n.pt` (5613764 bytes,
+SHA256 `0ebbc80d…644ee1`, coincide), suite **227 passed**, re-inferencia
+CPU sobre `Lone_runner.jpg` → 1 persona `[59.4, 242.8, 288.3, 608.0]` y
+`Empty_road_mongolia.jpg` → 5 detecciones (falsos positivos ya registrados,
+no bloquean ni cambian la regla de área). F1–F6 y T1–T5 verificados; sin
+hallazgos pendientes. `plan.md` pasa a **completada**. Etapa 03 no iniciada.
+
+- Re-inferencia del caso grupal (nota M3, 2026-10-07; solo append numérico,
+  cierre intacto): `fotos/Group_of_runners_at_the_Vienna_City_Marathon_2026-05.jpg`
+  960×640 RGB (EXIF→RGB), mismo `yolo11n.pt`, `confidence=0.25`, CPU →
+  11 personas (áreas 89637.6 máx … 1967.7 mín), selección
+  `[681.1, 236.8, 907.2, 633.2]` = la de mayor área, crop 1:1 m0.15
+  `(444, 124, 960, 640)`, 1.76 s. Coincide con la prueba real F6; anotación
+  existente en `/tmp/opencode/f6_annot/` reutilizada (no se generaron nuevas
+  ni se movieron fotos).
