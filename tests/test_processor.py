@@ -2,6 +2,7 @@
 
 import hashlib
 import math
+import pathlib
 
 import pytest
 from PIL import Image
@@ -97,6 +98,72 @@ def test_saved_original_intact_and_overwrites(tmp_path):
     assert process_image(src, out, review, stub, (1, 1), 0.15)[0] == "saved"
     assert sha(src) == before
     assert len(list(out.glob("*.jpg"))) == 1
+
+
+@pytest.mark.parametrize("alias", ["same", "relative", "symlink"])
+def test_folder_rejects_same_resolved_directory_before_writing(tmp_path, alias):
+    src = tmp_path / "in"
+    src.mkdir()
+    photo = make_jpg(src / "a.jpg")
+    before = sha(photo)
+    if alias == "same":
+        out = src
+    elif alias == "relative":
+        import os
+        out = pathlib.Path(os.path.relpath(src, pathlib.Path.cwd()))
+    else:
+        out = tmp_path / "alias"
+        out.symlink_to(src, target_is_directory=True)
+    stub = Stub(default=[(100, 100, 300, 300)])
+    with pytest.raises(FileExistsError):
+        process_folder(src, out, stub, None, 0.15)
+    assert sha(photo) == before
+    assert stub.calls == []
+    assert not (src / "review.log").exists()
+
+
+def test_process_image_rejects_same_target_before_writing(tmp_path):
+    src = make_jpg(tmp_path / "a.jpg")
+    before = sha(src)
+    stub = Stub(default=[(100, 100, 300, 300)])
+    with pytest.raises(FileExistsError):
+        process_image(src, tmp_path, tmp_path / "review", stub, None, 0.15)
+    assert sha(src) == before
+    assert stub.calls == []
+
+
+def test_process_image_rejects_review_target_that_is_original(tmp_path):
+    src = make_jpg(tmp_path / "a.jpg")
+    before = sha(src)
+    stub = Stub()
+    with pytest.raises(FileExistsError):
+        process_image(src, tmp_path / "out", tmp_path, stub, None, 0.15)
+    assert sha(src) == before
+    assert stub.calls == []
+
+
+@pytest.mark.parametrize("kind", ["symlink", "hardlink"])
+def test_process_image_rejects_existing_alias_to_source(tmp_path, kind):
+    src = make_jpg(tmp_path / "a.jpg")
+    out = tmp_path / "out"
+    out.mkdir()
+    destination = out / src.name
+    try:
+        if kind == "symlink":
+            destination.symlink_to(src)
+        else:
+            import os
+            os.link(src, destination)
+    except OSError as exc:
+        if kind == "hardlink":
+            pytest.skip(f"hard links unavailable: {exc}")
+        raise
+    before = sha(src)
+    stub = Stub(default=[(100, 100, 300, 300)])
+    with pytest.raises(FileExistsError):
+        process_image(src, out, out / "review", stub, None, 0.15)
+    assert sha(src) == before
+    assert stub.calls == []
 
 
 def test_saved_creates_missing_dirs(tmp_path):
@@ -274,6 +341,33 @@ def test_folder_creates_output_and_review_inside(tmp_path):
     assert (out / "review").is_dir()
 
 
+def test_folder_allows_output_inside_input(tmp_path):
+    src = tmp_path / "in"
+    src.mkdir()
+    make_jpg(src / "a.jpg", 400, 400)
+    out = src / "out"
+    summary = process_folder(
+        src, out, Stub(default=[(50, 50, 200, 200)]), (1, 1), 0.15)
+    assert summary["saved"] == 1
+    assert (out / "a.jpg").is_file()
+
+
+def test_folder_rejects_output_hardlink_to_original(tmp_path):
+    src = tmp_path / "in"
+    src.mkdir()
+    photo = make_jpg(src / "a.jpg")
+    out = tmp_path / "out"
+    out.mkdir()
+    import os
+    os.link(photo, out / photo.name)
+    before = sha(photo)
+    stub = Stub(default=[(50, 50, 200, 200)])
+    with pytest.raises(FileExistsError):
+        process_folder(src, out, stub, (1, 1), 0.15)
+    assert sha(photo) == before
+    assert stub.calls == []
+
+
 def test_folder_sorted_deterministic_order(tmp_path, capsys):
     src = tmp_path / "in"
     src.mkdir()
@@ -366,3 +460,103 @@ def test_folder_no_valid_crop_review_line(tmp_path):
     assert summary == {"processed": 1, "saved": 0, "review": 1, "skipped": 0}
     assert (tmp_path / "out" / "review.log").read_text() == (
         "tall.jpg: no_valid_crop\n")
+
+
+# --- stage 05 R1-R3 regressions: batch destinations vs all originals --------
+
+
+@pytest.mark.parametrize("kind", ["symlink", "hardlink"])
+def test_folder_rejects_log_alias_to_original(tmp_path, kind):
+    src = tmp_path / "in"
+    src.mkdir()
+    photo = make_jpg(src / "a.jpg", 800, 600)
+    out = tmp_path / "out"
+    out.mkdir()
+    log = out / "review.log"
+    if kind == "symlink":
+        log.symlink_to(photo)
+    else:
+        import os
+        os.link(photo, log)
+    before = sha(photo)
+    stub = Stub(default=[(100, 100, 300, 300)])
+    with pytest.raises(FileExistsError):
+        process_folder(src, out, stub, None, 0.15)
+    assert sha(photo) == before
+    assert stub.calls == []
+    assert not (out / "a.jpg").exists()
+    assert not (out / "review").exists()
+
+
+@pytest.mark.parametrize("kind", ["symlink", "hardlink"])
+def test_folder_rejects_cross_output_alias_to_other_original(tmp_path, kind):
+    src = tmp_path / "in"
+    src.mkdir()
+    first = make_jpg(src / "a.jpg", 800, 600)
+    second = make_jpg(src / "b.jpg", 800, 600, color=(30, 30, 200))
+    out = tmp_path / "out"
+    out.mkdir()
+    alias = out / "a.jpg"
+    if kind == "symlink":
+        alias.symlink_to(second)
+    else:
+        import os
+        os.link(second, alias)
+    before = {p.name: sha(p) for p in src.iterdir()}
+    stub = Stub(default=[(100, 100, 300, 300)])
+    with pytest.raises(FileExistsError):
+        process_folder(src, out, stub, None, 0.15)
+    assert {p.name: sha(p) for p in src.iterdir()} == before
+    assert stub.calls == []
+    assert not (out / "b.jpg").exists()
+    assert not (out / "review").exists()
+    assert not (out / "review.log").exists()
+
+
+@pytest.mark.parametrize("kind", ["symlink", "hardlink"])
+def test_folder_rejects_cross_review_alias_to_other_original(tmp_path, kind):
+    src = tmp_path / "in"
+    src.mkdir()
+    make_jpg(src / "a.jpg", 800, 600)
+    second = make_jpg(src / "b.jpg", 800, 600, color=(30, 30, 200))
+    out = tmp_path / "out"
+    review = out / "review"
+    review.mkdir(parents=True)
+    alias = review / "a.jpg"
+    if kind == "symlink":
+        alias.symlink_to(second)
+    else:
+        import os
+        os.link(second, alias)
+    before = {p.name: sha(p) for p in src.iterdir()}
+    stub = Stub(default=[(100, 100, 300, 300)])
+    with pytest.raises(FileExistsError):
+        process_folder(src, out, stub, None, 0.15)
+    assert {p.name: sha(p) for p in src.iterdir()} == before
+    assert stub.calls == []
+    assert not (out / "a.jpg").exists()
+    assert not (out / "b.jpg").exists()
+    assert not (out / "review.log").exists()
+
+
+def test_folder_late_conflict_writes_nothing(tmp_path):
+    import os
+    src = tmp_path / "in"
+    src.mkdir()
+    make_jpg(src / "a.jpg", 800, 600)
+    second = make_jpg(src / "b.jpg", 800, 600, color=(30, 30, 200))
+    out = tmp_path / "out"
+    out.mkdir()
+    make_jpg(out / "a.jpg", 400, 400, color=(10, 10, 10))
+    (out / "review.log").write_text("old\n", encoding="utf-8")
+    os.link(second, out / "b.jpg")
+    before_src = {p.name: sha(p) for p in src.iterdir()}
+    before_out = sha(out / "a.jpg")
+    stub = Stub(default=[(100, 100, 300, 300)])
+    with pytest.raises(FileExistsError):
+        process_folder(src, out, stub, None, 0.15)
+    assert {p.name: sha(p) for p in src.iterdir()} == before_src
+    assert sha(out / "a.jpg") == before_out
+    assert (out / "review.log").read_text(encoding="utf-8") == "old\n"
+    assert stub.calls == []
+    assert not (out / "review").exists()

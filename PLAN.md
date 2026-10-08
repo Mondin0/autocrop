@@ -276,3 +276,12 @@ JPEG de salida
 ```
 
 No intentes resolver todavía Lightroom ni el filtrado de foco.
+
+### Iteración post-MVP
+
+5. [Protección contra sobrescritura de originales](plans/05-seguridad-rutas/plan.md): rechazar carpetas equivalentes por ruta canónica y destinos de archivo que sean el original, incluso por symlink o hard link.
+6. [Dockerización del MVP](plans/06-dockerizacion/plan.md): contenedor persistente `autocrop` CPU (PyTorch solo-CPU, pesos locales copiados, `/input` readonly) para ejecutar la CLI sin cambiar el procesamiento.
+
+## Decisión Docker (etapa 06, solicitada por usuario)
+
+Empaquetar en imagen `python:3.12-slim` CPU con `torch`/`torchvision` del índice solo-CPU (sin fallback a PyPI), `yolo11n.pt` local copiado en build (fallar sin él, jamás descargar), servicio persistente `sleep infinity` y bind mounts configurables por `AUTOCROP_INPUT_DIR`/`AUTOCROP_OUTPUT_DIR` con `AUTOCROP_UID`/`AUTOCROP_GID` del host. Reutiliza selección/crop y protecciones vigentes.

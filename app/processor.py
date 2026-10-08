@@ -69,6 +69,62 @@ def _check_dir_pair(*paths: pathlib.Path) -> None:
             raise ValueError(f"path must be a pathlib.Path: {path!r}")
 
 
+def validate_folder_paths(input_dir: pathlib.Path, output_dir: pathlib.Path) -> None:
+    """Reject a folder destination that resolves to the input folder."""
+    if input_dir.resolve() == output_dir.resolve():
+        raise FileExistsError(
+            "input and output resolve to the same directory: "
+            f"{input_dir}")
+
+
+def _reject_original_destination(
+    image_path: pathlib.Path, *destinations: pathlib.Path
+) -> None:
+    source = image_path.resolve()
+    for destination in destinations:
+        if destination.resolve() == source or (
+            destination.exists() and destination.samefile(image_path)
+        ):
+            raise FileExistsError(
+                f"output would overwrite original image: {image_path}")
+
+
+def _reject_batch_destinations(
+    entries: list[pathlib.Path],
+    output_dir: pathlib.Path,
+    review_dir: pathlib.Path,
+    log_path: pathlib.Path,
+) -> None:
+    """Reject batch destinations aliasing any original before any write."""
+    by_resolved: dict[pathlib.Path, pathlib.Path] = {}
+    by_stat: dict[tuple[int, int], pathlib.Path] = {}
+    for source in entries:
+        by_resolved.setdefault(source.resolve(), source)
+        try:
+            stat = source.stat()
+        except OSError:
+            continue
+        by_stat.setdefault((stat.st_dev, stat.st_ino), source)
+
+    def check(destination: pathlib.Path) -> None:
+        hit = by_resolved.get(destination.resolve())
+        if hit is None:
+            try:
+                if destination.exists():
+                    stat = destination.stat()
+                    hit = by_stat.get((stat.st_dev, stat.st_ino))
+            except OSError:
+                hit = None
+        if hit is not None:
+            raise FileExistsError(
+                f"output would overwrite original image: {hit}")
+
+    for source in entries:
+        check(output_dir / source.name)
+        check(review_dir / source.name)
+    check(log_path)
+
+
 def _execute(
     image_path: pathlib.Path,
     output_dir: pathlib.Path,
@@ -118,6 +174,8 @@ def process_image(
     _check_dir_pair(image_path, output_dir, review_dir)
     _check_ratio(ratio)
     _check_margin(margin)
+    _reject_original_destination(
+        image_path, output_dir / image_path.name, review_dir / image_path.name)
     output_dir.mkdir(parents=True, exist_ok=True)
     review_dir.mkdir(parents=True, exist_ok=True)
     status, detail, _info = _execute(
@@ -141,12 +199,17 @@ def process_folder(
         raise FileNotFoundError(f"input directory not found: {input_dir}")
     if not input_dir.is_dir():
         raise NotADirectoryError(f"input is not a directory: {input_dir}")
+    validate_folder_paths(input_dir, output_dir)
     review_dir = output_dir / "review"
+    log_path = output_dir / _REVIEW_LOG
+    entries = sorted(input_dir.iterdir(), key=lambda p: p.name)
+    batch = [entry for entry in entries
+             if entry.is_file() and entry.suffix.lower() in _JPEG_SUFFIXES]
+    _reject_batch_destinations(batch, output_dir, review_dir, log_path)
     output_dir.mkdir(parents=True, exist_ok=True)
     review_dir.mkdir(parents=True, exist_ok=True)
     summary = {"processed": 0, "saved": 0, "review": 0, "skipped": 0}
     log_lines = []
-    entries = sorted(input_dir.iterdir(), key=lambda p: p.name)
     for entry in entries:
         if entry.is_dir() or not entry.is_file():
             continue

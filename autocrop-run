@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# Portable wrapper for the autocrop Docker pipeline.
+# Usage: ./autocrop-run [input] [output] [CLI options...]
+# Defaults: ./fotos ./output. Extra args go to the CLI inside
+# the container (e.g. ./autocrop-run ./fotos ./output --ratio 3:2).
+# Resolves absolute host paths, creates the output dir, (re)starts
+# the container when mounts change, then runs the same CLI.
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$ROOT"
+
+if [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
+    echo "Usage: ./autocrop-run [input] [output] [CLI options...]"
+    exit 0
+fi
+
+INPUT="${1:-./fotos}"
+OUTPUT="${2:-./output}"
+EXTRA=()
+if [ $# -gt 2 ]; then EXTRA=("${@:3}"); fi
+
+[ -d "$INPUT" ] || { echo "error: input directory not found: $INPUT" >&2; exit 1; }
+mkdir -p "$OUTPUT"
+
+export AUTOCROP_INPUT_DIR="$(realpath "$INPUT")"
+export AUTOCROP_OUTPUT_DIR="$(realpath "$OUTPUT")"
+export AUTOCROP_UID="$(id -u)" AUTOCROP_GID="$(id -g)"
+
+docker compose up -d --quiet-pull >/dev/null
+docker exec autocrop autocrop --input /input --output /output "${EXTRA[@]}"

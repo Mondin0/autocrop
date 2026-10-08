@@ -171,6 +171,22 @@ def test_main_file_as_input_nonzero(tmp_path, monkeypatch):
     assert not out.exists()
 
 
+def test_main_rejects_same_input_output_before_building_detector(
+    tmp_path, monkeypatch, capsys
+):
+    src = tmp_path / "in"
+    src.mkdir()
+    photo = make_jpg(src / "a.jpg")
+    before = photo.read_bytes()
+    calls = []
+    monkeypatch.setattr(cli, "build_detector", lambda: calls.append(True))
+    code = cli.main(["--input", str(src), "--output", str(src)])
+    assert code != 0
+    assert calls == []
+    assert photo.read_bytes() == before
+    assert "error:" in capsys.readouterr().err
+
+
 def test_main_missing_required_args(monkeypatch):
     monkeypatch.setattr(cli, "build_detector", lambda: Stub([]))
     with pytest.raises(SystemExit) as exc:

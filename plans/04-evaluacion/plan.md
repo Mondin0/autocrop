@@ -1,6 +1,6 @@
 # Etapa 04 — Evaluación del pipeline con fotos reales
 
-Estado: pendiente
+Estado: completada
 
 Dependencias: [etapa 01 completada](../01-crop/plan.md),
 [etapa 02 completada](../02-deteccion/plan.md),

@@ -1,0 +1,13 @@
+# Allowlist (stage 06, T3): only what the image build needs reaches
+# the daemon. Anything else in the workdir — fotos outside ./fotos,
+# local secrets/config (.env, .aws, .codex, .agents, ...), venvs,
+# caches, docs by stage — is never sent, including to a remote builder.
+*
+!Dockerfile
+!pyproject.toml
+!README.md
+!app/
+!yolo11n.pt
+# Caches are excluded even inside the allowed app/ tree.
+**/__pycache__/
+*.pyc

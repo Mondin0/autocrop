@@ -11,7 +11,7 @@ import pathlib
 import sys
 
 from app.detector import YOLODetector
-from app.processor import process_folder
+from app.processor import process_folder, validate_folder_paths
 
 
 def build_detector() -> YOLODetector:
@@ -56,6 +56,11 @@ def main(argv: list[str] | None = None) -> int:
     if not input_dir.is_dir():
         print(f"error: input directory not found: {input_dir}",
               file=sys.stderr)
+        return 1
+    try:
+        validate_folder_paths(input_dir, output_dir)
+    except OSError as exc:
+        print(f"error: {exc}", file=sys.stderr)
         return 1
     detector = build_detector()
     try:
