@@ -16,6 +16,29 @@ python3 -m venv .venv
 .venv/bin/python -m pip install -e '.[dev]'
 ```
 
+## Mac (Apple Silicon)
+
+Requisito: Python 3.12 (`python3.12 --version`) y `yolo11n.pt` en la raíz.
+Un comando desde la raíz del repositorio:
+
+```bash
+./setup-mac.sh          # runtime
+./setup-mac.sh --dev    # con .[dev] para correr tests
+```
+
+Crea `.venv`, instala el proyecto con dependencias pinneadas, verifica el
+hash de los pesos, corre `--help` y un humo sintético en directorios
+temporales (ruta `review`, sin imágenes reales y sin tocar originales).
+
+Si falla: sin `python3.12`, el script indica instalarlo con
+`brew install python@3.12` o desde python.org (no auto-instala nada); si
+`yolo11n.pt` falta o su hash difiere, descargalo de nuevo de una fuente
+oficial de Ultralytics (ver Pesos del modelo).
+
+Corre en CPU (`device="cpu"`); usar MPS queda como mejora futura. Los
+resultados en ARM pueden diferir de Linux en píxeles de borde por
+diferencias de redondeo en la inferencia.
+
 ## Tests
 
 ```bash
