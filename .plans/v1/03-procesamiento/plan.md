@@ -16,8 +16,8 @@ copia el original a `output/review/` con el motivo registrado, sin fallar el
 lote y sin modificar jamás los originales.
 
 Esta etapa agrega I/O real (apertura, guardado, carpetas, CLI). Las
-decisiones generales siguen en [PLAN.md](../../PLAN.md); el ciclo de
-trabajo, en [AGENTS.md](../../AGENTS.md).
+decisiones generales siguen en [PLAN.md](../PLAN.md); el ciclo de
+trabajo, en [AGENTS.md](../../../AGENTS.md).
 
 ## Alcance y entregables
 
@@ -126,7 +126,7 @@ python -m app.cli --input DIR --output DIR [--ratio W:H] [--margin F]
 - El detector se construye una vez con `yolo11n.pt` del directorio actual
   (ruta `Path("yolo11n.pt")`, la misma documentada en README) y
   `confidence=0.25`. Sin flags de modelo/umbral en esta etapa.
-- Consola por archivo, formato de [PLAN.md](../../PLAN.md):
+- Consola por archivo, formato de [PLAN.md](../PLAN.md):
   `Processing IMG_001.jpg / Detected N person(s) / Selected subject bbox:
   (...) / Crop: (...) | Review (...: motivo) / Saved ...`. Al final,
   línea de resumen `Done: X processed, Y saved, Z review, W skipped`.

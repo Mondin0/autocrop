@@ -4,7 +4,7 @@ MVP local de recorte de fotografías deportivas.
 
 El recorrido técnico, las decisiones y los resultados de las etapas 01–06 están
 en [Historial técnico](docs/historial-tecnico.md). Los contratos y comandos de
-verificación originales están en `plans/`.
+verificación originales están en [.plans/v1/](.plans/v1/); el [plan V2](.plans/v2/PLAN.md) describe la siguiente versión.
 
 ## Entorno
 
@@ -144,9 +144,9 @@ Para cambiar las carpetas montadas, modificar las variables y ejecutar
 `docker compose up -d` de nuevo para recrear el contenedor. Para detenerlo,
 ejecutar `docker compose down`. Si la entrada no existe, el build no encuentra
 los pesos, o se indican rutas conflictivas, el comando falla con un error;
-la [etapa 05](plans/05-seguridad-rutas/plan.md) documenta la protección de
+la [etapa 05](.plans/v1/05-seguridad-rutas/plan.md) documenta la protección de
 originales. La selección por mayor área y la calidad de composición siguen
-siendo las evaluadas en la [etapa 04](plans/04-evaluacion/registro.md).
+siendo las evaluadas en la [etapa 04](.plans/v1/04-evaluacion/registro.md).
 
 ### Versiones de la imagen
 

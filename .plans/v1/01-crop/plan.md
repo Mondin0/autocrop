@@ -6,7 +6,7 @@ Dependencias: ninguna. Implementación: Muse. Revisión: Astra.
 
 ## Objetivo y alcance
 
-Crear la base mínima de Python 3.12+ y una función pura que calcule un recorte con proporción fija, incluya al sujeto completo y permanezca dentro de la imagen. Escribir los tests unitarios antes de implementar la lógica, según [AGENTS.md](../../AGENTS.md).
+Crear la base mínima de Python 3.12+ y una función pura que calcule un recorte con proporción fija, incluya al sujeto completo y permanezca dentro de la imagen. Escribir los tests unitarios antes de implementar la lógica, según [AGENTS.md](../../../AGENTS.md).
 
 Entregables: `app/__init__.py`, `app/crop.py`, `tests/test_crop.py`, `pyproject.toml` y un `README.md` con instalación y ejecución de tests. En esta etapa, la producción de `app/crop.py` usa solamente biblioteca estándar (la restricción no aplica a etapas posteriores); `pytest` es dependencia de desarrollo. No crear otros módulos vacíos.
 

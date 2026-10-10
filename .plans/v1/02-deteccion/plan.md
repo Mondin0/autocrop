@@ -8,7 +8,7 @@ Dependencias: [etapa 01 completada](../01-crop/plan.md). Implementación: Muse. 
 
 Obtener cajas de personas mediante YOLO y elegir como sujeto la persona con mayor área de caja. Entregar su caja en el mismo sistema de coordenadas que acepta `calculate_crop()`, sin mezclar detección, selección y matemática.
 
-Esta etapa agrega detección real, no todavía el procesamiento de carpetas. Las decisiones generales siguen en [PLAN.md](../../PLAN.md); el ciclo de trabajo, en [AGENTS.md](../../AGENTS.md).
+Esta etapa agrega detección real, no todavía el procesamiento de carpetas. Las decisiones generales siguen en [PLAN.md](../PLAN.md); el ciclo de trabajo, en [AGENTS.md](../../../AGENTS.md).
 
 ## Alcance y entregables
 

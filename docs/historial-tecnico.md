@@ -2,8 +2,8 @@
 
 Este documento resume el trabajo realizado desde el inicio hasta la
 dockerización. Los contratos, hallazgos y resultados completos de cada etapa
-permanecen en `plans/NN-nombre/{plan.md,registro.md}`. El [README](../README.md)
-contiene los comandos de uso; [PLAN.md](../PLAN.md) contiene el alcance del
+permanecen en `.plans/v1/NN-nombre/{plan.md,registro.md}`. El [README](../README.md)
+contiene los comandos de uso; [PLAN.md](../.plans/v1/PLAN.md) contiene el alcance del
 producto y las decisiones compartidas.
 
 ## Producto y arquitectura actual
@@ -27,12 +27,12 @@ sin alteraciones y se registran en `review.log`.
 
 | Etapa | Entrega y verificación | Decisión o límite vigente |
 | --- | --- | --- |
-| [01 — Matemática](../plans/01-crop/plan.md) | `calculate_crop()` devuelve coordenadas enteras, dentro de la imagen, con proporción exacta, o `None` cuando no cabe el sujeto. Pruebas de bordes, proporciones, entradas inválidas y un oráculo independiente de geometría. | La geometría es pura y se puede probar sin YOLO ni fotos. |
-| [02 — Detección y selección](../plans/02-deteccion/plan.md) | Adaptador YOLO para clase `person` y selección determinista de la caja de mayor área; pruebas con backend simulado y prueba real en CPU. | La caja más grande no siempre es el sujeto que quería el fotógrafo. |
-| [03 — Procesamiento y CLI](../plans/03-procesamiento/plan.md) | Lectura JPEG, orientación EXIF, procesamiento por carpeta, salida de recortes, `review/` y `review.log`; prueba real con pesos locales. La suite llegó a 301 tests. | Una excepción de inferencia puede interrumpir el lote. |
-| [04 — Evaluación con fotos](../plans/04-evaluacion/plan.md) | Dos corridas sobre 13 fotos, inspección visual por foto, hashes de originales y resultados repetidos. Detección: 13/13; selección y composición: 10/13. | El MVP es parcialmente usable: hubo un microrecorte sin sujeto principal y dos elecciones/composiciones incorrectas. |
-| [05 — Seguridad de rutas](../plans/05-seguridad-rutas/plan.md) | Rechazo previo de carpetas equivalentes y destinos que identifican originales, incluso por symlink o hard link; CLI informa el conflicto antes de construir el detector. Suite: 318 tests. | Se permiten carpetas padre/hija cuando no hay colisión con un original. |
-| [06 — Docker](../plans/06-dockerizacion/plan.md) | Imagen CPU con YOLO11n local, comando `autocrop`, Compose con contenedor persistente, `/input` solo lectura y `/output` escribible. Se verificaron inferencia sin red, permisos, hashes, errores y 323 tests. | La imagen pesa aproximadamente 2.46 GB; las versiones de base y paquetes no están fijadas para reconstrucciones futuras. |
+| [01 — Matemática](../.plans/v1/01-crop/plan.md) | `calculate_crop()` devuelve coordenadas enteras, dentro de la imagen, con proporción exacta, o `None` cuando no cabe el sujeto. Pruebas de bordes, proporciones, entradas inválidas y un oráculo independiente de geometría. | La geometría es pura y se puede probar sin YOLO ni fotos. |
+| [02 — Detección y selección](../.plans/v1/02-deteccion/plan.md) | Adaptador YOLO para clase `person` y selección determinista de la caja de mayor área; pruebas con backend simulado y prueba real en CPU. | La caja más grande no siempre es el sujeto que quería el fotógrafo. |
+| [03 — Procesamiento y CLI](../.plans/v1/03-procesamiento/plan.md) | Lectura JPEG, orientación EXIF, procesamiento por carpeta, salida de recortes, `review/` y `review.log`; prueba real con pesos locales. La suite llegó a 301 tests. | Una excepción de inferencia puede interrumpir el lote. |
+| [04 — Evaluación con fotos](../.plans/v1/04-evaluacion/plan.md) | Dos corridas sobre 13 fotos, inspección visual por foto, hashes de originales y resultados repetidos. Detección: 13/13; selección y composición: 10/13. | El MVP es parcialmente usable: hubo un microrecorte sin sujeto principal y dos elecciones/composiciones incorrectas. |
+| [05 — Seguridad de rutas](../.plans/v1/05-seguridad-rutas/plan.md) | Rechazo previo de carpetas equivalentes y destinos que identifican originales, incluso por symlink o hard link; CLI informa el conflicto antes de construir el detector. Suite: 318 tests. | Se permiten carpetas padre/hija cuando no hay colisión con un original. |
+| [06 — Docker](../.plans/v1/06-dockerizacion/plan.md) | Imagen CPU con YOLO11n local, comando `autocrop`, Compose con contenedor persistente, `/input` solo lectura y `/output` escribible. Se verificaron inferencia sin red, permisos, hashes, errores y 323 tests. | La imagen pesa aproximadamente 2.46 GB; las versiones de base y paquetes no están fijadas para reconstrucciones futuras. |
 
 Cada etapa siguió el ciclo del [AGENTS.md](../AGENTS.md): contrato, tests
 primero, implementación y revisión con hallazgos en su `registro.md`. Las
@@ -42,7 +42,7 @@ evidencia en los registros originales.
 
 ## Resultado de la evaluación fotográfica
 
-La [tabla por foto de la etapa 04](../plans/04-evaluacion/registro.md) muestra
+La [tabla por foto de la etapa 04](../.plans/v1/04-evaluacion/registro.md) muestra
 13 salidas `saved` y ninguna enviada a `review/`. En `Empty_road_mongolia.jpg`
 se guardó un recorte de 123×82 píxeles pese a no haber sujeto principal claro.
 En la foto grupal de Viena se eligió un corredor de espaldas; en
