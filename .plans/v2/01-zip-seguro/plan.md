@@ -1,8 +1,8 @@
 # Etapa V2-01 — ZIP seguro alrededor del motor
 
-Estado: pendiente
+Estado: completada
 
-El usuario debe aprobar este contrato antes de delegar implementación.
+Contrato aprobado por el usuario; implementación delegada a OpenCode Muse mediante un subagente coordinador y revisada por el director.
 
 Dependencias: V1 disponible; decisiones compartidas en [V2](../PLAN.md). Implementación por defecto: OpenCode Muse. Revisión: el director que definió esta etapa.
 
