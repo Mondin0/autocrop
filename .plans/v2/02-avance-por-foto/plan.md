@@ -1,6 +1,6 @@
 # Etapa V2-02 — Avance por foto
 
-Estado: pendiente
+Estado: completada
 
 Dependencias: V2-01 completada y decisiones compartidas en [V2](../PLAN.md). El usuario debe aprobar este contrato antes de delegar implementación.
 

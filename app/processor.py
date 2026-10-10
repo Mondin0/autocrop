@@ -11,6 +11,7 @@ from __future__ import annotations
 import math
 import pathlib
 import shutil
+from collections.abc import Callable
 
 from PIL import Image, ImageOps
 
@@ -189,8 +190,11 @@ def process_folder(
     detector: object,
     ratio: tuple[int, int] | None,
     margin: float,
+    on_progress: Callable[[dict[str, int | str | None]], None] | None = None,
 ) -> dict[str, int]:
     """Process top-level JPEGs of ``input_dir``; never fail on one bad photo."""
+    if on_progress is not None and not callable(on_progress):
+        raise ValueError(f"on_progress must be callable: {on_progress!r}")
     _check_detector(detector)
     _check_dir_pair(input_dir, output_dir)
     _check_ratio(ratio)
@@ -210,6 +214,7 @@ def process_folder(
     review_dir.mkdir(parents=True, exist_ok=True)
     summary = {"processed": 0, "saved": 0, "review": 0, "skipped": 0}
     log_lines = []
+    total = len(batch)
     for entry in entries:
         if entry.is_dir() or not entry.is_file():
             continue
@@ -217,6 +222,10 @@ def process_folder(
             print(f"Skipped {entry.name}: unsupported extension")
             summary["skipped"] += 1
             continue
+        if on_progress is not None:
+            on_progress({"current": entry.name, "processed": summary["processed"],
+                         "total": total, "saved": summary["saved"],
+                         "review": summary["review"]})
         summary["processed"] += 1
         print(f"Processing {entry.name}")
         status, detail, info = _execute(
@@ -233,5 +242,9 @@ def process_folder(
             print(f"Review ({entry.name}: {detail})")
             summary["review"] += 1
             log_lines.append(f"{entry.name}: {detail}\n")
+        if on_progress is not None:
+            on_progress({"current": entry.name, "processed": summary["processed"],
+                         "total": total, "saved": summary["saved"],
+                         "review": summary["review"]})
     (output_dir / _REVIEW_LOG).write_text("".join(log_lines), encoding="utf-8")
     return summary

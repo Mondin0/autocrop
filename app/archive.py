@@ -7,6 +7,7 @@ import os
 import pathlib
 import tempfile
 import zipfile
+from collections.abc import Callable
 
 from app.processor import process_folder
 
@@ -62,8 +63,11 @@ def process_archive(
     detector: object,
     ratio: tuple[int, int] | None = None,
     margin: float = 0.15,
+    on_progress: Callable[[dict[str, int | str | None]], None] | None = None,
 ) -> dict[str, int]:
     """Process a ZIP of JPEGs into a ZIP of ``process_folder()`` output."""
+    if on_progress is not None and not callable(on_progress):
+        raise ValueError(f"on_progress must be callable: {on_progress!r}")
     if not isinstance(input_zip, pathlib.Path):
         raise ValueError(f"input_zip must be a pathlib.Path: {input_zip!r}")
     if not isinstance(output_zip, pathlib.Path):
@@ -117,7 +121,7 @@ def process_archive(
                 tempfile.TemporaryDirectory() as out_tmp:
             in_dir = pathlib.Path(in_tmp)
             out_dir = pathlib.Path(out_tmp)
-            total = 0
+            written = 0
             for info in sorted(candidates, key=lambda i: i.filename):
                 try:
                     with zf.open(info) as src:
@@ -127,8 +131,8 @@ def process_archive(
                                 chunk = src.read(_CHUNK)
                                 if not chunk:
                                     break
-                                total += len(chunk)
-                                if total > MAX_TOTAL_UNCOMPRESSED:
+                                written += len(chunk)
+                                if written > MAX_TOTAL_UNCOMPRESSED:
                                     raise _fail(
                                         "uncompressed size exceeds 2 GiB")
                                 fh.write(chunk)
@@ -138,7 +142,12 @@ def process_archive(
                     raise _fail(
                         f"cannot read entry: {info.filename!r} ({exc})"
                     ) from exc
-            summary = process_folder(in_dir, out_dir, detector, ratio, margin)
+            total = len(candidates)
+            if on_progress is not None:
+                on_progress({"current": None, "processed": 0, "total": total,
+                             "saved": 0, "review": 0})
+            summary = process_folder(
+                in_dir, out_dir, detector, ratio, margin, on_progress)
 
             files = sorted(
                 p.relative_to(out_dir).as_posix()
@@ -173,4 +182,8 @@ def process_archive(
                         os.unlink(tmp_out)
                     except OSError:
                         pass
+            if on_progress is not None:
+                on_progress({"current": None, "processed": total,
+                             "total": total, "saved": summary["saved"],
+                             "review": summary["review"]})
             return summary

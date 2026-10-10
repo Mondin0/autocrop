@@ -121,10 +121,14 @@ def test_valid_zip_matches_process_folder(tmp_path):
 def test_signature_matches_contract():
     sig = inspect.signature(process_archive)
     params = list(sig.parameters.values())
-    assert [p.name for p in params] == [
+    assert [p.name for p in params][:5] == [
         "input_zip", "output_zip", "detector", "ratio", "margin"]
     assert params[3].default is None
     assert params[4].default == 0.15
+    # V2-02 agrega on_progress opcional final; llamadas existentes intactas.
+    if len(params) == 6:
+        assert params[5].name == "on_progress"
+        assert params[5].default is None
 
 
 # --- F2: output contents and originals intact --------------------------------
