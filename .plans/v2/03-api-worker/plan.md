@@ -1,6 +1,6 @@
 # Etapa V2-03 — API y worker de trabajos
 
-Estado: pendiente
+Estado: completada
 
 Contrato aprobado explícitamente por el usuario el 2026-10-10. La aprobación autoriza iniciar la implementación de esta etapa en una sesión nueva.
 
