@@ -7,6 +7,7 @@
 !pyproject.toml
 !README.md
 !app/
+!frontend/
 !yolo11n.pt
 # Caches are excluded even inside the allowed app/ tree.
 **/__pycache__/

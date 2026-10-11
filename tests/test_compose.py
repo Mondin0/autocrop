@@ -123,10 +123,14 @@ def test_t1_healthchecks_and_ready_dependencies():
 # F2 ---------------------------------------------------------------------
 
 def test_f2_only_api_publishes_loopback_port():
+    # V2-05 amplía el contrato: api y frontend publican en loopback;
+    # redis/rustfs/worker siguen sin publicar (ver tests/test_frontend.py).
     services = compose()["services"]
     publishers = {n: s for n, s in services.items() if s.get("ports")}
-    assert set(publishers) == {"api"}
+    assert set(publishers) == {"api", "frontend"}
     for mapping in publishers["api"]["ports"]:
+        assert str(mapping).startswith("127.0.0.1:"), mapping
+    for mapping in publishers["frontend"]["ports"]:
         assert str(mapping).startswith("127.0.0.1:"), mapping
     for svc in services.values():
         assert svc.get("network_mode") != "host"

@@ -20,5 +20,7 @@ Un fotógrafo levanta Docker Compose en su computadora Linux, abre una página l
 2. [Avance por foto](02-avance-por-foto/plan.md): eventos de progreso observables durante el procesamiento de un ZIP, sin servicios web.
 3. [API y worker de trabajos](03-api-worker/plan.md): crear trabajos de procesamiento, consultar su estado/progreso y descargar el resultado usando Redis y RustFS, sin interfaz web ni configuración Compose.
 4. [Arquitectura local con Docker Compose](04-compose/plan.md): ejecutar la API, el worker, Redis y RustFS como demo local integrada, accesible solo desde localhost.
+5. [Interfaz web local](05-interfaz-local/plan.md): subir un ZIP desde el navegador, consultar el avance por foto y descargar el resultado desde la API local.
+6. [Arranque Compose sin carpetas de datos del host](06-compose-sin-datos-host/plan.md): iniciar la demo V2 sin directorios de entrada/salida del host, conservando el build local de pesos y dependencias.
 
-Las etapas posteriores se definirán una por vez para conectar la interfaz y la operación restante. No implementar etapas futuras durante V2-04.
+Las etapas posteriores se definirán una por vez. No implementar etapas futuras durante una etapa V2.

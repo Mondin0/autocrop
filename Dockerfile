@@ -33,6 +33,7 @@ RUN pip install --no-cache-dir "ultralytics==8.4.174" "Pillow" \
 # without yolo11n.pt fails here instead of downloading anything later.
 COPY pyproject.toml README.md ./
 COPY app ./app
+COPY frontend ./frontend
 COPY yolo11n.pt ./yolo11n.pt
 RUN pip install --no-cache-dir --no-deps . \
     && pip check

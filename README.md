@@ -172,34 +172,102 @@ resultados. Para repetir la instalación con las mismas versiones habrá que
 fijar el digest de la base, las dependencias directas y transitivas, y las
 bibliotecas del sistema; esa fijación todavía no forma parte de la imagen.
 
-## Demo local V2 (API + worker + Redis + RustFS)
+## Demo local V2 con Docker Compose
 
-Levanta la arquitectura V2 en Linux como demo privada local: la API y el
-worker comparten la imagen `autocrop:latest`, Redis guarda cola y estado,
-y RustFS guarda los ZIP de entrada y salida. Solo la API publica un
-puerto, ligado a la interfaz loopback del host; Redis y RustFS solo son
-accesibles desde la red de Compose. El servicio `autocrop` de la CLI V1
-sigue disponible en el mismo archivo.
+La demo levanta la interfaz web, la API y el worker en contenedores separados,
+además de Redis para cola/estado y RustFS para los ZIP temporales. La interfaz
+está en `http://localhost:8080`; también se puede llamar a la API directamente
+en `http://localhost:8000`. Ambos puertos quedan ligados a `127.0.0.1`.
+Redis y RustFS no publican puertos al host. El servicio `autocrop` de V1 sigue
+definido en Compose bajo el perfil explícito `v1` (no arranca por defecto);
+al activarlo conserva sus montajes y comportamiento existentes.
+
+### Requisitos y preparación
+
+- Docker Engine y el plugin Docker Compose.
+- El checkout del repositorio con `yolo11n.pt` en la raíz. El build copia
+  ese archivo a la imagen y no descarga pesos.
+- Un ZIP de hasta 500 MiB con uno o más JPEG en la raíz. El procesador rechaza
+  JPEG anidados y aplica también límites de cantidad y tamaño descomprimido
+  descritos en [V2-01](.plans/v2/01-zip-seguro/plan.md).
+
+La demo V2 no necesita `.env` ni carpetas `fotos/` u `output/` en el host:
+el arranque predeterminado levanta solo frontend, API, worker, Redis y
+RustFS, y los ZIP, resultados y estado de trabajos quedan en los servicios
+y en los volúmenes nombrados `redis-data` y `rustfs-data`. Las variables de
+[.env.example](.env.example) (`AUTOCROP_FRONTEND_PORT`, `AUTOCROP_API_PORT`,
+`AUTOCROP_INPUT_DIR`, `AUTOCROP_OUTPUT_DIR`, `AUTOCROP_UID`/`AUTOCROP_GID`)
+solo son necesarias si quieres cambiar puertos o usar el servicio V1.
+
+### Levantar y probar desde el navegador
 
 ```bash
 docker compose up -d --build
+docker compose ps
+```
+
+Abre `http://localhost:8080`, selecciona el ZIP y envíalo. La página muestra
+el estado, la foto actual y los contadores que entrega la API. Al terminar,
+usa el enlace de descarga. Si un trabajo falla, la página muestra el error;
+puedes enviar otro ZIP sin reiniciar Compose.
+
+También puedes probar el mismo recorrido con `curl`:
+
+```bash
 curl -F file=@lote.zip http://localhost:8000/api/jobs
-docker compose logs -f api worker
+```
+
+La respuesta `202` incluye `job_id`. Copia ese valor en `JOB_ID` y consulta el
+trabajo:
+
+```bash
+JOB_ID="pega-aqui-el-job_id"
+curl "http://localhost:8000/api/jobs/${JOB_ID}"
+```
+
+Cuando `status` sea `completed`, descarga el resultado (disponible por tres
+horas desde que termina):
+
+```bash
+curl -L -o resultado.zip "http://localhost:8000/api/jobs/${JOB_ID}/result"
+```
+
+Para revisar actividad y errores:
+
+```bash
+docker compose logs -f frontend api worker
+```
+
+### Detener y borrar datos de prueba
+
+```bash
 docker compose down
 ```
 
-- La API responde en `http://localhost:8000` por defecto (ver
-  `AUTOCROP_API_PORT` en [.env.example](.env.example)). Crear un trabajo:
-  `POST /api/jobs` con multipart `file` (202, `{job_id, status}`).
-  Consultar: `GET /api/jobs/{job_id}`. Descargar el ZIP final:
-  `GET /api/jobs/{job_id}/result` (disponible hasta tres horas después de
-  terminar, como define V2-03).
-- El worker usa el mismo detector y valores por defecto que la CLI
-  (`yolo11n.pt`, confianza 0.25, margen 0.15) y ejecuta la limpieza de
-  trabajos vencidos en cada pasada sin trabajo.
-- Los datos de Redis y RustFS sobreviven a `docker compose down`/`up`
-  mediante volúmenes nombrados; `docker compose down -v` los elimina.
-- Las credenciales de [.env.example](.env.example) son valores de demo
-  local, no secretos reales; cambiarlas si RustFS dejara de estar aislado.
-  Requiere Docker Engine con plugin Compose y `yolo11n.pt` en la raíz
-  (el build falla sin los pesos, sin descargar nada).
+Esto detiene y elimina los contenedores, pero conserva los datos de Redis y
+RustFS en los volúmenes nombrados `redis-data` y `rustfs-data` para la
+próxima ejecución. Para borrar también los trabajos y ZIP almacenados por
+Compose:
+
+```bash
+docker compose down -v
+```
+
+Con `down -v` se eliminan esos volúmenes nombrados y sus datos.
+
+Para usar la CLI V1, actívala con su perfil explícito (conserva sus montajes
+`fotos/` y `output/` del host):
+
+```bash
+export AUTOCROP_UID=$(id -u) AUTOCROP_GID=$(id -g)
+mkdir -p fotos output
+docker compose --profile v1 up -d --build
+docker exec -it autocrop autocrop --input /input --output /output
+```
+
+Las credenciales de [.env.example](.env.example) son valores de demo, no
+secretos reales. Redis y RustFS quedan solo en la red interna mientras no se
+publiquen sus puertos; no uses esos valores si expones RustFS fuera del host.
+El contrato de la API, estados y expiración está en
+[V2-03](.plans/v2/03-api-worker/plan.md), y el de la interfaz en
+[V2-05](.plans/v2/05-interfaz-local/plan.md).

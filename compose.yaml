@@ -1,5 +1,6 @@
 services:
   autocrop:
+    profiles: ["v1"]
     build: .
     image: autocrop:latest
     container_name: autocrop
@@ -68,6 +69,23 @@ services:
         condition: service_healthy
       rustfs:
         condition: service_healthy
+  frontend:
+    build: .
+    image: autocrop:latest
+    container_name: autocrop-frontend
+    command: ["python", "-m", "app.frontend"]
+    working_dir: /app
+    user: "${AUTOCROP_UID:-1000}:${AUTOCROP_GID:-1000}"
+    environment:
+      HOME: /tmp/home
+      XDG_CONFIG_HOME: /tmp/home/.config
+      MPLCONFIGDIR: /tmp/home/.config/matplotlib
+      FRONTEND_API_BASE: "http://api:8000"
+    ports:
+      - "127.0.0.1:${AUTOCROP_FRONTEND_PORT:-8080}:8080"
+    depends_on:
+      api:
+        condition: service_started
   redis:
     image: redis:7-alpine
     container_name: autocrop-redis
