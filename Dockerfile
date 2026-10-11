@@ -22,8 +22,12 @@ RUN pip install --no-cache-dir \
     --index-url https://download.pytorch.org/whl/cpu \
     torch torchvision
 
-# Remaining runtime deps from PyPI.
-RUN pip install --no-cache-dir "ultralytics" "Pillow"
+# Remaining runtime deps from PyPI (CLI engine plus V2 API/worker server deps).
+# Every project dependency outside the CPU torch stack is listed here:
+# the later `pip install --no-deps .` skips dependencies on purpose so a
+# future CUDA default on PyPI can never replace the CPU torch above.
+RUN pip install --no-cache-dir "ultralytics==8.4.174" "Pillow" \
+    "fastapi" "python-multipart" "uvicorn" "redis" "boto3"
 
 # Project metadata + code. Weights come from the local file; building
 # without yolo11n.pt fails here instead of downloading anything later.

@@ -22,3 +22,82 @@ services:
         target: /output
         bind:
           create_host_path: false
+  api:
+    build: .
+    image: autocrop:latest
+    container_name: autocrop-api
+    command: ["uvicorn", "app.serve:app", "--host", "0.0.0.0", "--port", "8000"]
+    working_dir: /app
+    user: "${AUTOCROP_UID:-1000}:${AUTOCROP_GID:-1000}"
+    environment:
+      HOME: /tmp/home
+      XDG_CONFIG_HOME: /tmp/home/.config
+      MPLCONFIGDIR: /tmp/home/.config/matplotlib
+      AWS_EC2_METADATA_DISABLED: "true"
+      AUTOCROP_REDIS_URL: "${AUTOCROP_REDIS_URL:-redis://redis:6379/0}"
+      AUTOCROP_S3_ENDPOINT: "${AUTOCROP_S3_ENDPOINT:-http://rustfs:9000}"
+      AUTOCROP_S3_BUCKET: "${AUTOCROP_S3_BUCKET:-autocrop}"
+      AUTOCROP_S3_ACCESS_KEY: "${AUTOCROP_S3_ACCESS_KEY:-autocrop-local}"
+      AUTOCROP_S3_SECRET_KEY: "${AUTOCROP_S3_SECRET_KEY:-autocrop-local-secret-01}"
+    ports:
+      - "127.0.0.1:${AUTOCROP_API_PORT:-8000}:8000"
+    depends_on:
+      redis:
+        condition: service_healthy
+      rustfs:
+        condition: service_healthy
+  worker:
+    build: .
+    image: autocrop:latest
+    container_name: autocrop-worker
+    command: ["python", "-m", "app.worker"]
+    working_dir: /app
+    user: "${AUTOCROP_UID:-1000}:${AUTOCROP_GID:-1000}"
+    environment:
+      HOME: /tmp/home
+      XDG_CONFIG_HOME: /tmp/home/.config
+      MPLCONFIGDIR: /tmp/home/.config/matplotlib
+      AWS_EC2_METADATA_DISABLED: "true"
+      AUTOCROP_REDIS_URL: "${AUTOCROP_REDIS_URL:-redis://redis:6379/0}"
+      AUTOCROP_S3_ENDPOINT: "${AUTOCROP_S3_ENDPOINT:-http://rustfs:9000}"
+      AUTOCROP_S3_BUCKET: "${AUTOCROP_S3_BUCKET:-autocrop}"
+      AUTOCROP_S3_ACCESS_KEY: "${AUTOCROP_S3_ACCESS_KEY:-autocrop-local}"
+      AUTOCROP_S3_SECRET_KEY: "${AUTOCROP_S3_SECRET_KEY:-autocrop-local-secret-01}"
+    depends_on:
+      redis:
+        condition: service_healthy
+      rustfs:
+        condition: service_healthy
+  redis:
+    image: redis:7-alpine
+    container_name: autocrop-redis
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+  rustfs:
+    image: rustfs/rustfs:latest
+    container_name: autocrop-rustfs
+    command: ["/data"]
+    environment:
+      RUSTFS_ADDRESS: ":9000"
+      RUSTFS_CONSOLE_ENABLE: "false"
+      RUSTFS_REGION: "us-east-1"
+      RUSTFS_ACCESS_KEY: "${AUTOCROP_S3_ACCESS_KEY:-autocrop-local}"
+      RUSTFS_SECRET_KEY: "${AUTOCROP_S3_SECRET_KEY:-autocrop-local-secret-01}"
+    volumes:
+      - rustfs-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9000/health || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+volumes:
+  redis-data:
+  rustfs-data:

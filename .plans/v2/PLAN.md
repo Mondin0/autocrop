@@ -19,5 +19,6 @@ Un fotógrafo levanta Docker Compose en su computadora Linux, abre una página l
 1. [ZIP seguro alrededor del motor](01-zip-seguro/plan.md): entrada, límites, extracción y empaquetado de salida sin servicios web.
 2. [Avance por foto](02-avance-por-foto/plan.md): eventos de progreso observables durante el procesamiento de un ZIP, sin servicios web.
 3. [API y worker de trabajos](03-api-worker/plan.md): crear trabajos de procesamiento, consultar su estado/progreso y descargar el resultado usando Redis y RustFS, sin interfaz web ni configuración Compose.
+4. [Arquitectura local con Docker Compose](04-compose/plan.md): ejecutar la API, el worker, Redis y RustFS como demo local integrada, accesible solo desde localhost.
 
-Las etapas posteriores se definirán una por vez para conectar API, cola, almacenamiento, interfaz y operación. No implementarlas durante la etapa 02.
+Las etapas posteriores se definirán una por vez para conectar la interfaz y la operación restante. No implementar etapas futuras durante V2-04.
