@@ -19,6 +19,12 @@ Permitir levantar en Linux la arquitectura de procesamiento V2 con Docker Compos
 - `docker compose up --build` construye y levanta el conjunto; `docker compose down` lo detiene. El README documenta los comandos de inicio, URL local y detención.
 - Se conserva la CLI V1 y su configuración Docker actual, salvo cambios estrictamente necesarios para que la configuración V2 coexista sin alterar su comportamiento.
 
+## Hotfix posterior: rutas de acceso local
+
+- En la API, `GET /health` devuelve HTTP 200 con `{"status":"ok"}`, `GET /` redirige a `http://localhost:8080` y `GET /favicon.ico` devuelve HTTP 204.
+- Las rutas desconocidas siguen devolviendo HTTP 404; las rutas de trabajos conservan el contrato V2-03.
+- La redirección usa el puerto frontend predeterminado de Compose.
+
 ## Criterios
 
 - **F1:** `docker compose config` valida la configuración y `docker compose up --build` levanta API, worker, Redis y RustFS en Linux.

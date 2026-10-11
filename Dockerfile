@@ -20,14 +20,16 @@ RUN mkdir -p /tmp/home/.config && chmod -R 777 /tmp/home
 # The later PyPI install keeps this torch (already satisfying) untouched.
 RUN pip install --no-cache-dir \
     --index-url https://download.pytorch.org/whl/cpu \
-    torch torchvision
+    "torch==2.14.1" "torchvision==0.29.1"
 
 # Remaining runtime deps from PyPI (CLI engine plus V2 API/worker server deps).
 # Every project dependency outside the CPU torch stack is listed here:
 # the later `pip install --no-deps .` skips dependencies on purpose so a
 # future CUDA default on PyPI can never replace the CPU torch above.
-RUN pip install --no-cache-dir "ultralytics==8.4.174" "Pillow" \
-    "fastapi" "python-multipart" "uvicorn" "redis" "boto3"
+RUN pip install --no-cache-dir \
+    "ultralytics==8.4.174" "Pillow==12.3.0" \
+    "fastapi==0.143.0" "python-multipart==0.0.32" \
+    "uvicorn==0.54.0" "redis==8.1.0" "boto3==1.43.111"
 
 # Project metadata + code. Weights come from the local file; building
 # without yolo11n.pt fails here instead of downloading anything later.

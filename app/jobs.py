@@ -17,6 +17,7 @@ from typing import Any, Callable
 
 from app.archive import process_archive
 from fastapi import FastAPI, File, HTTPException, Response, UploadFile
+from fastapi.responses import RedirectResponse
 
 MAX_UPLOAD_BYTES = 500 * 1024 * 1024
 RESULT_TTL_SECONDS = 3 * 3600
@@ -343,6 +344,18 @@ class JobService:
 
 def create_app(service: JobService) -> Any:
     app = FastAPI(title="autocrop jobs")
+
+    @app.get("/health")
+    def health():  # type: ignore[no-untyped-def]
+        return {"status": "ok"}
+
+    @app.get("/", include_in_schema=False)
+    def home():  # type: ignore[no-untyped-def]
+        return RedirectResponse("http://localhost:8080")
+
+    @app.get("/favicon.ico", include_in_schema=False)
+    def favicon():  # type: ignore[no-untyped-def]
+        return Response(status_code=204)
 
     @app.post("/api/jobs", status_code=202)
     async def create_job(file: UploadFile = File(...)):  # type: ignore[no-untyped-def]

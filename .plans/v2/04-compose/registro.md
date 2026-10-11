@@ -233,3 +233,16 @@ comprobaciones independientes** listados arriba. No quedan hallazgos abiertos.
 Cierre: F1–F6 y T1–T2 verificados. V2-04 queda **completada**. Aunque supera
 el umbral para etapas críticas, no se preparó ni implementó V2-05 por petición
 explícita del usuario.
+
+## Hotfix posterior: rutas de acceso local
+
+### Implementación
+
+- `app/jobs.py`: `GET /health` responde `200` con `{"status":"ok"}`; `GET /` redirige a `http://localhost:8080`; `GET /favicon.ico` responde `204`.
+- `tests/test_compose.py`: reemplaza la regresión que exigía 404 en `/health` y `/` por aserciones de las respuestas nuevas; conserva 404 para `/api`.
+- `.plans/v2/04-compose/plan.md` y `.plans/v2/05-interfaz-local/plan.md`: documentan las rutas y eliminan la contradicción sobre disponibilidad de `/health`.
+- Test primero: `.venv/bin/python -m pytest tests/test_compose.py -q -k api_health_root_and_favicon_routes` falló antes del cambio porque `/health` respondía 404.
+- Tras implementar: `.venv/bin/python -m pytest tests/test_compose.py tests/test_api_worker.py -q` → 39 passed.
+- `.venv/bin/python -m pytest -q` → falló al preparar 4 tests de `tests/test_frontend_browser.py` porque no está disponible la fixture `page`; la suite no reportó fallos de aserción.
+- `.venv/bin/python -m pytest -q --ignore=tests/test_frontend_browser.py` → resto de la suite verde (un test omitido).
+- `docker compose config --quiet` y `git diff --check` → sin errores.

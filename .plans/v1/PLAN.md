@@ -283,6 +283,7 @@ No intentes resolver todavía Lightroom ni el filtrado de foco.
 
 5. [Protección contra sobrescritura de originales](05-seguridad-rutas/plan.md): rechazar carpetas equivalentes por ruta canónica y destinos de archivo que sean el original, incluso por symlink o hard link.
 6. [Dockerización del MVP](06-dockerizacion/plan.md): contenedor persistente `autocrop` CPU (PyTorch solo-CPU, pesos locales copiados, `/input` readonly) para ejecutar la CLI sin cambiar el procesamiento.
+8. [Publicación en Docker Hub](08-publicacion-docker-hub/plan.md): dependencias directas fijadas, imagen amd64/arm64 y Compose para consumir una imagen publicada.
 
 ## Decisión Docker (etapa 06, solicitada por usuario)
 

@@ -163,14 +163,32 @@ docker run --rm --network none autocrop:latest python -m pip list --format=freez
 docker run --rm --network none autocrop:latest python -c 'import sys, torch; print(sys.version.split()[0], torch.__version__, torch.version.cuda)'
 ```
 
-Estas son versiones **observadas**, no fijadas para builds futuros. El
-Dockerfile usa `python:3.12-slim`, instala bibliotecas del sistema desde los
-repositorios vigentes e instala paquetes Python sin versiones exactas. El
-índice CPU asegura la variante de PyTorch, pero puede ofrecer otra versión.
-Un `docker compose up -d --build` posterior puede cambiar dependencias y
-resultados. Para repetir la instalación con las mismas versiones habrá que
-fijar el digest de la base, las dependencias directas y transitivas, y las
-bibliotecas del sistema; esa fijación todavía no forma parte de la imagen.
+El Dockerfile fija las dependencias Python directas y PyTorch CPU. La imagen
+base y las dependencias transitivas todavía pueden cambiar entre builds.
+
+### Usar una imagen de Docker Hub
+
+Con una imagen publicada, indicar su nombre completo, incluido usuario y tag.
+Compose conserva Redis y RustFS y descarga la imagen de Autocrop en lugar de
+construirla localmente:
+
+```bash
+export AUTOCROP_IMAGE=tu-usuario/autocrop:0.1.0
+docker compose -f compose.yaml -f compose.hub.yaml up -d
+```
+
+Para preparar una publicación multiarch, reemplazar `tu-usuario` por el
+namespace propio en Docker Hub y ejecutar desde la raíz:
+
+```bash
+docker buildx build --platform linux/amd64,linux/arm64 \
+  --tag tu-usuario/autocrop:0.1.0 \
+  --tag tu-usuario/autocrop:latest --push .
+```
+
+El tag versionado permite conservar una versión concreta; `latest` sigue la
+publicación más reciente. Para volver al build local, usar los comandos de la
+sección Docker sin `compose.hub.yaml`.
 
 ## Demo local V2 con Docker Compose
 

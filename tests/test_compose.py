@@ -385,11 +385,17 @@ def test_packaging_dev_includes_test_transport():
 
 # API log clarification (director correction round) ------------------------
 
-def test_api_uncontracted_paths_are_404():
+def test_api_health_root_and_favicon_routes():
     svc = runtime.build_service(
         state=MemoryStateStore(), blobs=MemoryBlobStore(),
         process_fn=fake_process)
     client = TestClient(serve.create_local_app(
         state=svc.state, blobs=svc.blobs))
-    for path in ("/health", "/", "/api"):
-        assert client.get(path).status_code == 404, path
+    health = client.get("/health")
+    assert health.status_code == 200
+    assert health.json() == {"status": "ok"}
+    root = client.get("/", follow_redirects=False)
+    assert root.status_code == 307
+    assert root.headers["location"] == "http://localhost:8080"
+    assert client.get("/favicon.ico").status_code == 204
+    assert client.get("/api").status_code == 404

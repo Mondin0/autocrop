@@ -16,7 +16,7 @@ Permitir que una persona use la demo local desde un contenedor frontend separado
 - Para un trabajo aceptado, consulta `GET /api/jobs/{job_id}` cada segundo mientras su estado sea `queued` o `processing`. Muestra el estado, la foto actual cuando exista y los contadores `processed/total`, `saved` y `review` tal como los devuelve la API. No calcula ni inventa progreso.
 - Al llegar a `completed`, detiene la consulta y ofrece descargar el resultado mediante `GET /api/jobs/{job_id}/result`. En `failed`, detiene la consulta y muestra el mensaje `error` devuelto por la API. No ofrece descarga antes de completar.
 - Los errores observables de envío, consulta o descarga (incluidos límite excedido, respuesta HTTP no exitosa y fallo de conexión) se presentan como mensaje visible en la página; un error de consulta detiene el sondeo hasta que la persona vuelva a enviar un trabajo. No se pierde la posibilidad de enviar otro trabajo.
-- No se agregan rutas de API ni se altera su semántica. La raíz `/` del frontend sirve la página; rutas no contratadas como `/health` continúan sin estar disponibles en la API. La interfaz solo gestiona el trabajo actual de la página; no promete persistencia del identificador tras recargar.
+- La etapa no agrega rutas de API ni altera la semántica de trabajos. La raíz `/` del frontend sirve la página; en la API, `/` redirige a ese frontend y `/health` responde 200 según el hotfix posterior de V2-04. La interfaz solo gestiona el trabajo actual de la página; no promete persistencia del identificador tras recargar.
 
 ## Criterios
 
