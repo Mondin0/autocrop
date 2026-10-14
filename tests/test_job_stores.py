@@ -32,6 +32,26 @@ class FakeRedis:
         items = self.lists.get(key, [])
         return items.pop(0) if items else None
 
+    def lmove(self, src, dst, src_pos, dst_pos):
+        assert (src_pos, dst_pos) == ("LEFT", "RIGHT")
+        items = self.lists.get(src, [])
+        if not items:
+            return None
+        value = items.pop(0)
+        self.lists.setdefault(dst, []).append(value)
+        return value
+
+    def lrem(self, key, count, value):
+        items = self.lists.get(key, [])
+        before = len(items)
+        target = self._enc(value)
+        items[:] = [v for v in items if v != target]
+        return before - len(items)
+
+    def lrange(self, key, start, stop):
+        items = self.lists.get(key, [])
+        return items[start:] if stop == -1 else items[start:stop + 1]
+
     def sadd(self, key, *values):
         self.sets.setdefault(key, set()).update(self._enc(v) for v in values)
 
@@ -117,6 +137,21 @@ class FakeS3:
         with open(Filename, "rb") as fh:
             self.objects[(Bucket, Key)] = fh.read()
         return None
+
+    def get_paginator(self, name):
+        assert name == "list_objects_v2"
+        parent = self
+
+        class _Paginator:
+            def paginate(self, Bucket, Prefix):
+                from datetime import datetime, timezone
+
+                yield {"Contents": [
+                    {"Key": key, "LastModified": datetime.now(timezone.utc)}
+                    for (bucket, key) in sorted(parent.objects)
+                    if bucket == Bucket and key.startswith(Prefix)]}
+
+        return _Paginator()
 
 
 def _record(**kw):

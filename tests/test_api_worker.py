@@ -338,14 +338,16 @@ def test_t1_reuses_process_archive_with_real_engine(tmp_path):
 
 
 def test_storage_error_marks_failed_with_readable_error():
+    # V2-07: run_next downloads via get_file(); inject there (get is kept
+    # only for result_bytes compat and no longer on the production path).
     svc, _ = make_service(process_fn=fake_ok())
     client = make_client(svc)
     job_id = post_zip(client, two_photo_zip_bytes()).json()["job_id"]
 
-    def broken(key):
+    def broken(key, dest):
         raise ConnectionError("rustfs-down")
 
-    svc.blobs.get = broken
+    svc.blobs.get_file = broken
     done = svc.run_next(two_photo_stub())
     assert done["status"] == "failed"
     assert "rustfs-down" in done["error"]

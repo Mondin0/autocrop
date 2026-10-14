@@ -109,7 +109,7 @@ Desde la raíz del repositorio, con fotos JPEG en `./fotos`:
 ```bash
 export AUTOCROP_UID=$(id -u) AUTOCROP_GID=$(id -g)
 mkdir -p output
-docker compose up -d --build
+docker compose --profile v1 up -d --build
 docker exec -it autocrop autocrop --help
 docker exec -it autocrop autocrop --input /input --output /output
 ```
@@ -117,7 +117,9 @@ docker exec -it autocrop autocrop --input /input --output /output
 Atajo portable: `./autocrop-run [input] [output] [opciones]` hace lo mismo
 resolviendo rutas absolutas, creando la salida si falta y levantando el
 contenedor si hace falta (defaults `./fotos` `./output`; acepta `--ratio` y
-`--margin` al final).
+`--margin` al final). Como el servicio V1 está bajo el perfil `v1`, los
+comandos que lo levantan o recrean llevan `--profile v1`; sin ese perfil
+Compose no arranca el contenedor `autocrop`.
 
 Para usar otras carpetas existentes, definir rutas absolutas **antes** de crear
 el contenedor. La carpeta de salida debe existir; Compose no crea ninguno de
@@ -128,7 +130,7 @@ export AUTOCROP_INPUT_DIR=/ruta/absoluta/a/fotos
 export AUTOCROP_OUTPUT_DIR=/ruta/absoluta/a/salida
 export AUTOCROP_UID=$(id -u) AUTOCROP_GID=$(id -g)
 mkdir -p "$AUTOCROP_OUTPUT_DIR"
-docker compose up -d --build
+docker compose --profile v1 up -d --build
 docker exec -it autocrop autocrop --input /input --output /output --ratio 3:2 --margin 0.15
 ```
 
@@ -141,8 +143,8 @@ los casos que requieren revisión aparecen en `review/`, con su motivo en
 `review.log`. Los archivos nuevos pertenecen al UID/GID exportado.
 
 Para cambiar las carpetas montadas, modificar las variables y ejecutar
-`docker compose up -d` de nuevo para recrear el contenedor. Para detenerlo,
-ejecutar `docker compose down`. Si la entrada no existe, el build no encuentra
+`docker compose --profile v1 up -d` de nuevo para recrear el contenedor. Para detenerlo,
+ejecutar `docker compose --profile v1 down`. Si la entrada no existe, el build no encuentra
 los pesos, o se indican rutas conflictivas, el comando falla con un error;
 la [etapa 05](.plans/v1/05-seguridad-rutas/plan.md) documenta la protección de
 originales. La selección por mayor área y la calidad de composición siguen
@@ -196,6 +198,10 @@ La demo levanta la interfaz web, la API y el worker en contenedores separados,
 además de Redis para cola/estado y RustFS para los ZIP temporales. La interfaz
 está en `http://localhost:8080`; también se puede llamar a la API directamente
 en `http://localhost:8000`. Ambos puertos quedan ligados a `127.0.0.1`.
+La raíz de la API (`/`) conserva su redirección histórica a
+`http://localhost:8080`; si personalizas el puerto con
+`AUTOCROP_FRONTEND_PORT`, abre directamente el puerto configurado en lugar
+de seguir esa redirección.
 Redis y RustFS no publican puertos al host. El servicio `autocrop` de V1 sigue
 definido en Compose bajo el perfil explícito `v1` (no arranca por defecto);
 al activarlo conserva sus montajes y comportamiento existentes.
@@ -250,11 +256,33 @@ horas desde que termina):
 curl -L -o resultado.zip "http://localhost:8000/api/jobs/${JOB_ID}/result"
 ```
 
+El servidor transfiere los ZIP por bloques con memoria acotada, pero la
+página descarga con `Response.blob()`, que mantiene el archivo completo en
+la memoria del navegador; para lotes grandes prefiere `curl`.
+
+### Reinicio, expiración y limpieza
+
+Si Compose se reinicia con trabajos en curso (en cola o en proceso), esos
+trabajos interrumpidos pasan a `failed` de forma visible al reclamar la
+cola; no se reanudan. Vuelve a enviar el ZIP para reprocesarlo.
+
+El resultado de un trabajo terminado (`completed`) puede descargarse
+durante tres horas desde que termina; los fallidos se conservan hasta la
+limpieza con la misma retención. Pasado ese plazo la descarga devuelve
+`410` (resultado vencido); una vez que la limpieza borra el trabajo,
+devuelve `404` (resultado ausente o ya limpiado). La limpieza corre entre
+trabajos y en espera: una inferencia larga puede retrasar el borrado
+físico, pero nunca amplía la disponibilidad de descarga.
+
 Para revisar actividad y errores:
 
 ```bash
 docker compose logs -f frontend api worker
 ```
+
+El worker registra reclamos (`marked N interrupted job(s) as failed`),
+limpieza (`cleaned N expired job(s)`) y reintentos; si un trabajo falla o
+desaparece, esos logs indican si fue interrupción, vencimiento o limpieza.
 
 ### Detener y borrar datos de prueba
 

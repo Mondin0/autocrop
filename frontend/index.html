@@ -11,15 +11,22 @@
 <input type="file" id="file" name="file">
 <button type="submit" id="send">Enviar ZIP</button>
 </form>
+<p>Sube un ZIP de hasta 500 MiB con JPEG (.jpg/.jpeg) en su raíz.
+El resultado puede descargarse durante tres horas desde que termina el trabajo.
+Puedes enviar otro lote tras la aceptación o un fallo; cambia el trabajo
+visible sin cancelar el anterior en el servidor.</p>
 <div id="error" role="alert"></div>
 <div id="status" role="status" aria-live="polite"></div>
 <div id="counters" role="status" aria-live="polite"></div>
 <div id="current" role="status" aria-live="polite"></div>
 <a id="download" hidden>Descargar resultado</a>
 <script>
-let pollTimer = null;
+let pollTimeout = null;
 let currentJob = null;
+let generation = 0;
+let sending = false;
 const form = document.getElementById("upload-form");
+const sendButton = document.getElementById("send");
 const errorBox = document.getElementById("error");
 const statusBox = document.getElementById("status");
 const countersBox = document.getElementById("counters");
@@ -30,20 +37,31 @@ function showError(message) {
   errorBox.textContent = message;
 }
 
+function setSending(value) {
+  sending = value;
+  sendButton.disabled = value;
+}
+
 function stopPolling() {
-  if (pollTimer !== null) {
-    clearInterval(pollTimer);
-    pollTimer = null;
+  if (pollTimeout !== null) {
+    clearTimeout(pollTimeout);
+    pollTimeout = null;
   }
 }
 
-async function poll(jobId) {
+async function poll(jobId, gen) {
   let res;
   try {
     res = await fetch("/api/jobs/" + encodeURIComponent(jobId));
   } catch (err) {
+    if (gen !== generation) {
+      return;
+    }
     stopPolling();
     showError("fallo de conexión al consultar el trabajo");
+    return;
+  }
+  if (gen !== generation) {
     return;
   }
   if (!res.ok) {
@@ -51,20 +69,35 @@ async function poll(jobId) {
     showError("consulta falló: " + res.status);
     return;
   }
-  const data = await res.json();
+  let data;
+  try {
+    data = await res.json();
+  } catch (err) {
+    if (gen !== generation) {
+      return;
+    }
+    stopPolling();
+    showError("respuesta inválida al consultar el trabajo");
+    return;
+  }
+  if (gen !== generation) {
+    return;
+  }
   statusBox.textContent = "estado: " + data.status;
   currentBox.textContent = data.current == null ? "" : "foto actual: " + data.current;
   countersBox.textContent = "procesadas " + data.processed + "/" + data.total +
     " guardadas " + data.saved + " revisión " + data.review;
   if (data.status === "queued" || data.status === "processing") {
+    pollTimeout = setTimeout(() => poll(jobId, gen), 1000);
     return;
   }
+  stopPolling();
   if (data.status === "completed") {
-    stopPolling();
+    downloadLink.dataset.job = jobId;
+    downloadLink.dataset.gen = String(gen);
     downloadLink.hidden = false;
     downloadLink.href = "/api/jobs/" + encodeURIComponent(jobId) + "/result";
   } else if (data.status === "failed") {
-    stopPolling();
     downloadLink.hidden = true;
     showError(data.error || "trabajo fallido");
   }
@@ -72,13 +105,25 @@ async function poll(jobId) {
 
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
+  if (sending) {
+    return;
+  }
+  const input = document.getElementById("file");
+  if (!input.files || input.files.length === 0) {
+    showError("selecciona un archivo ZIP antes de enviar");
+    return;
+  }
+  setSending(true);
   stopPolling();
+  generation += 1;
+  const gen = generation;
   showError("");
   downloadLink.hidden = true;
+  delete downloadLink.dataset.job;
+  delete downloadLink.dataset.gen;
   statusBox.textContent = "";
   countersBox.textContent = "";
   currentBox.textContent = "";
-  const input = document.getElementById("file");
   const formData = new FormData();
   formData.append("file", input.files[0]);
   let res;
@@ -86,42 +131,76 @@ form.addEventListener("submit", async (event) => {
     res = await fetch("/api/jobs", {method: "POST", body: formData});
   } catch (err) {
     showError("fallo de conexión al enviar el trabajo");
+    setSending(false);
     return;
   }
   if (res.status === 413) {
     showError("límite excedido: el ZIP supera 500 MiB");
+    setSending(false);
     return;
   }
   if (res.status === 202) {
-    const data = await res.json();
+    let data;
+    try {
+      data = await res.json();
+    } catch (err) {
+      showError("respuesta inválida al aceptar el trabajo");
+      setSending(false);
+      return;
+    }
     currentJob = data.job_id;
     statusBox.textContent = "trabajo aceptado: " + data.job_id + " estado: " + data.status;
-    pollTimer = setInterval(() => poll(currentJob), 1000);
-    poll(currentJob);
+    setSending(false);
+    poll(currentJob, gen);
     return;
   }
   showError("envío falló: " + res.status);
+  setSending(false);
 });
 
 downloadLink.addEventListener("click", async (event) => {
   event.preventDefault();
-  showError("");
+  const jobId = downloadLink.dataset.job || currentJob;
+  const rawGen = downloadLink.dataset.gen;
+  const gen = rawGen === undefined ? generation : Number(rawGen);
+  if (!jobId) {
+    return;
+  }
   let res;
   try {
-    res = await fetch(downloadLink.href);
+    res = await fetch("/api/jobs/" + encodeURIComponent(jobId) + "/result");
   } catch (err) {
-    showError("fallo de conexión al descargar el resultado");
+    if (gen === generation) {
+      showError("fallo de conexión al descargar el resultado");
+    }
     return;
   }
   if (!res.ok) {
-    showError("descarga falló: " + res.status);
+    if (gen !== generation) {
+      return;
+    }
+    if (res.status === 410) {
+      showError("resultado vencido: terminó hace más de tres horas");
+    } else if (res.status === 404) {
+      showError("resultado ausente o ya limpiado");
+    } else {
+      showError("descarga falló: " + res.status);
+    }
     return;
   }
-  const blob = await res.blob();
+  let blob;
+  try {
+    blob = await res.blob();
+  } catch (err) {
+    if (gen === generation) {
+      showError("fallo de conexión al descargar el resultado");
+    }
+    return;
+  }
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
-  anchor.download = currentJob + ".zip";
+  anchor.download = jobId + ".zip";
   anchor.click();
   URL.revokeObjectURL(url);
 });
