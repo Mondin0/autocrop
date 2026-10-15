@@ -307,7 +307,7 @@ def test_rejects_compressed_limit(tmp_path, monkeypatch):
     monkeypatch.setattr(archive, "MAX_INPUT_BYTES", 10)
     out = tmp_path / "out.zip"
     check_rejected(input_zip, out, Stub(), None, 0.15,
-                   ValueError, "500 MiB")
+                   ValueError, "2 GiB")
     assert not out.exists()
 
 

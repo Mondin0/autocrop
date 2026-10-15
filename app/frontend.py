@@ -58,9 +58,13 @@ def create_handler(api_base: str | None = None) -> Any:
             conn = None
             try:
                 parts = urlsplit(base)
-                conn = http.client.HTTPConnection(
-                    parts.hostname or "api", parts.port or 80, timeout=30)
                 length = int(self.headers.get("Content-Length") or 0)
+                # Las subidas (límite 2 GiB) tardan minutos en reenviarse y
+                # en obtener respuesta; sin cuerpo se conserva el corto.
+                proxy_timeout = 600 if length else 30
+                conn = http.client.HTTPConnection(
+                    parts.hostname or "api", parts.port or 80,
+                    timeout=proxy_timeout)
                 conn.putrequest(self.command, self.path,
                                 skip_accept_encoding=True)
                 ctype = self.headers.get("Content-Type")

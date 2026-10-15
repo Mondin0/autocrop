@@ -211,7 +211,7 @@ al activarlo conserva sus montajes y comportamiento existentes.
 - Docker Engine y el plugin Docker Compose.
 - El checkout del repositorio con `yolo11n.pt` en la raíz. El build copia
   ese archivo a la imagen y no descarga pesos.
-- Un ZIP de hasta 500 MiB con uno o más JPEG en la raíz. El procesador rechaza
+- Un ZIP de hasta 2 GiB con uno o más JPEG en la raíz. El procesador rechaza
   JPEG anidados y aplica también límites de cantidad y tamaño descomprimido
   descritos en [V2-01](.plans/v2/01-zip-seguro/plan.md).
 

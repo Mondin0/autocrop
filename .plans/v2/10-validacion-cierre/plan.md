@@ -1,8 +1,8 @@
 # Etapa V2-10 — Validación integral y cierre de V2
 
-Estado: pendiente
+Estado: en revisión
 
-Aprobación: contrato propuesto; requiere aprobación explícita del usuario antes de delegar ejecución.
+Aprobación: contrato aprobado explícitamente por el usuario antes de delegar ejecución.
 
 Dependencias: V2-07, V2-08 y V2-09 completadas; V2-01 a V2-06 conservan sus cierres históricos.
 
@@ -17,7 +17,7 @@ Verificar la demo local Linux como producto integrado: arranque, fotos reales, p
 - Las fotos reales provienen de una carpeta o ZIP local indicado por el usuario; trabajar con copias temporales y comparar hashes de originales antes/después. No buscar fotos privadas fuera de las rutas autorizadas ni descargar un corpus para sustituir esa validación.
 - Corpus pequeño pero representativo: persona con recorte, sin persona/revisión, múltiples personas, orientación EXIF/vertical y horizontal; añadir JPEG ilegible y nombres con espacios/caracteres españoles mediante fixtures controladas. Si el corpus real no cubre algún caso, completar con sintéticos y declarar cuál. Inspeccionar visualmente originales y recortes, revisar `review.log` y verificar bytes idénticos para fotos en review. Calidad de composición conserva los límites documentados de V1; no promete detectar siempre al deportista deseado.
 - Recorrido con navegador real contra Compose: subir, observar queued/processing, nombres y contadores, completar, descargar ZIP íntegro con `review/` y `review.log`. Repetir con ZIP inválido/anidado y volver a enviar un lote válido sin reiniciar.
-- Validar un ZIP válido grande, cercano al límite de 500 MiB, y rechazo por encima del límite a través del frontend y API; registrar tamaño, tiempo y pico de memoria de API/worker, sin imponer un objetivo de rendimiento inventado. Construir fixtures en temporales y eliminarlas al acabar. Demostrar que no aparecen copias completas del ZIP en memoria de servidor con evidencia combinada de tests de V2-07 y medición; diferenciar coste YOLO/decodificación. La memoria del navegador se registra como límite conocido.
+- Validar un ZIP válido grande, cercano al límite de 2 GiB, y rechazo por encima del límite a través del frontend y API; registrar tamaño, tiempo y pico de memoria de API/worker, sin imponer un objetivo de rendimiento inventado. Construir fixtures en temporales y eliminarlas al acabar. Demostrar que no aparecen copias completas del ZIP en memoria de servidor con evidencia combinada de tests de V2-07 y medición; diferenciar coste YOLO/decodificación. La memoria del navegador se registra como límite conocido.
 - Reiniciar worker durante un trabajo; comprobar failed legible y avance de los pendientes. Reiniciar Compose sin borrar volúmenes y comprobar resultado completado vigente descargable. Los tests automáticos de fronteras cubren TTL con reloj; en servicios reales usar una copia de registros de prueba marcada con hora antigua para demostrar 410 previo a limpieza, eliminación posterior y reintento ante fallo de borrado. No esperar tres horas ni cambiar el TTL productivo.
 - Usar recursos Docker de prueba identificados. No ejecutar `down -v` sobre datos preexistentes; preferir un nombre de proyecto aislado con nombres/puertos de contenedor ajustados en override temporal, sin alterar Compose productivo. Documentar el aislamiento antes de arrancar. Eliminar al terminar únicamente recursos creados por esta validación; conservar pesos, originales, entorno de trabajo y recursos ajenos.
 - Actualizar README si la ejecución revela instrucciones incorrectas, y el índice V2 con estado final y enlace a la evidencia solo cuando todos los criterios estén verificados. No crear tag/release ni hacer commit/publicación automáticamente. V1-07 permanece en revisión.

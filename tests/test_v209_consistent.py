@@ -70,7 +70,7 @@ class _V9Api(http.server.BaseHTTPRequestHandler):
             self._send_json(500, {"detail": "boom"})
             return
         if mode == "too-large":
-            self._send_json(413, {"detail": "upload exceeds 500 MiB"})
+            self._send_json(413, {"detail": "upload exceeds 2 GiB"})
             return
         if mode == "badjson":
             self._send_raw(202, b'{"job_id": ', "application/json")
@@ -411,7 +411,7 @@ def test_upload_errors_readable_and_allow_retry(page, live_v9, tmp_path):  # typ
     _V9Api.state["accept_mode"] = "too-large"
     _goto_submit(page, live_v9, tmp_path)
     page.wait_for_function(
-        "() => document.getElementById('error').textContent.includes('500')", timeout=8000)
+        "() => document.getElementById('error').textContent.includes('2 GiB')", timeout=8000)
     assert page.locator("#send").is_enabled()
     _V9Api.state["accept_mode"] = "http500"
     _resubmit(page, tmp_path, "in3.zip")
@@ -540,7 +540,7 @@ def test_page_hints_single_job_and_safe_rendering():
             / "frontend" / "index.html").read_text(encoding="utf-8")
     lowered = text.lower()
     assert "jpeg" in lowered and "raíz" in lowered
-    assert "500" in text
+    assert "2 GiB" in text
     assert "tres horas" in lowered or "3 h" in lowered
     assert "textContent" in text
     assert "disabled" in text

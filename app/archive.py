@@ -11,7 +11,7 @@ from collections.abc import Callable
 
 from app.processor import process_folder
 
-MAX_INPUT_BYTES = 500 * 1024 * 1024
+MAX_INPUT_BYTES = 2 * 1024 * 1024 * 1024
 MAX_TOTAL_UNCOMPRESSED = 2 * 1024 * 1024 * 1024
 MAX_ENTRIES = 10_000
 
@@ -80,7 +80,7 @@ def process_archive(
     if not input_zip.is_file():
         raise ValueError(f"input is not a file: {input_zip}")
     if input_zip.stat().st_size > MAX_INPUT_BYTES:
-        raise _fail(f"input zip exceeds 500 MiB: {input_zip}")
+        raise _fail(f"input zip exceeds 2 GiB: {input_zip}")
 
     try:
         zf = zipfile.ZipFile(input_zip)

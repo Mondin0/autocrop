@@ -21,7 +21,7 @@ from app.archive import process_archive
 from fastapi import FastAPI, File, HTTPException, Response, UploadFile
 from fastapi.responses import FileResponse, RedirectResponse
 
-MAX_UPLOAD_BYTES = 500 * 1024 * 1024
+MAX_UPLOAD_BYTES = 2 * 1024 * 1024 * 1024
 RESULT_TTL_SECONDS = 3 * 3600
 _CHUNK = 1024 * 1024
 INTERRUPTED_ERROR = ("worker interrupted before finishing; "
@@ -787,13 +787,13 @@ def create_app(service: JobService) -> Any:
                     size += len(chunk)
                     if size > service.max_upload_bytes:
                         raise HTTPException(
-                            status_code=413, detail="upload exceeds 500 MiB")
+                            status_code=413, detail="upload exceeds 2 GiB")
                     fh.write(chunk)
             try:
                 record = service.submit_file(tmp_name)
             except TooLargeError:
                 raise HTTPException(
-                    status_code=413, detail="upload exceeds 500 MiB")
+                    status_code=413, detail="upload exceeds 2 GiB")
             return {"job_id": record["job_id"], "status": record["status"]}
         finally:
             try:

@@ -11,7 +11,7 @@
 <input type="file" id="file" name="file">
 <button type="submit" id="send">Enviar ZIP</button>
 </form>
-<p>Sube un ZIP de hasta 500 MiB con JPEG (.jpg/.jpeg) en su raíz.
+<p>Sube un ZIP de hasta 2 GiB con JPEG (.jpg/.jpeg) en su raíz.
 El resultado puede descargarse durante tres horas desde que termina el trabajo.
 Puedes enviar otro lote tras la aceptación o un fallo; cambia el trabajo
 visible sin cancelar el anterior en el servidor.</p>
@@ -135,7 +135,7 @@ form.addEventListener("submit", async (event) => {
     return;
   }
   if (res.status === 413) {
-    showError("límite excedido: el ZIP supera 500 MiB");
+    showError("límite excedido: el ZIP supera 2 GiB");
     setSending(false);
     return;
   }
