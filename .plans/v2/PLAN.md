@@ -12,6 +12,7 @@ Un fotógrafo levanta Docker Compose en su computadora Linux, abre una página l
 - FastAPI sirve API y pantalla sencilla. Redis mantiene cola y estado; un worker procesa un trabajo a la vez. RustFS guarda temporalmente los ZIP de entrada y salida.
 - El ZIP final puede descargarse hasta tres horas después de terminar el trabajo. La API rechaza descargas vencidas y una tarea limpia objetos y temporales; la caducidad exacta no depende de las reglas por días de RustFS.
 - Compose publica la web en `localhost` por defecto. La primera validación es en Linux y se trata de una demo privada local. No se añade autenticación ni acceso público en esta versión.
+- Para V2, `api`, `worker` y `frontend` usan `AUTOCROP_IMAGE` con valor predeterminado `mondin0/autocrop:latest`; el despliegue publicado usa `docker compose up -d --pull always` y el desarrollo local `docker compose up -d --build`. El servicio V1 `autocrop` conserva `image: autocrop:latest` y su build local. Esta decisión supersede únicamente la parte de composición de V1-08 sobre elegir imagen publicada mediante overlay; su contrato y evidencia histórica permanecen intactos.
 - El director redacta cada contrato; el usuario lo aprueba antes de delegar código. El implementador escribe tests primero; el director revisa el diff y la evidencia hasta cerrar hallazgos. Ver [AGENTS.md](../../AGENTS.md).
 
 ## Etapas
@@ -27,6 +28,7 @@ Un fotógrafo levanta Docker Compose en su computadora Linux, abre una página l
 8. [Recuperación y limpieza de trabajos](08-ciclo-de-vida/plan.md): reclamación durable, interrupciones visibles, retención de fallidos y limpieza reintentable incluso con cola ocupada.
 9. [Interfaz consistente y documentación](09-interfaz-consistente/plan.md): aislar respuestas tardías, evitar envíos/sondeos duplicados y corregir instrucciones de V1/V2.
 10. [Validación integral y cierre](10-validacion-cierre/plan.md): navegador y servicios reales, corpus fotográfico, lote grande, reinicio y expiración.
+11. [Despliegue simple](11-despliegue-simple/plan.md): consumir la imagen V2 publicada desde el Compose principal y documentar el arranque publicado y el build local sin overlay.
 
 ## Ruta de cierre propuesta el 2026-10-14
 

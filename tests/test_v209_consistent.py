@@ -559,11 +559,14 @@ def test_readme_covers_profiles_recovery_and_limits():
     for token in ("interrump", "vencid", "fallid", "logs", "limpi"):
         assert token in lowered, token
     blocks = re.findall(r"```bash(.*?)```", text, re.S)
-    hub = [b for b in blocks
-           if "compose.hub.yaml" in b and "buildx" not in b]
-    assert hub, "bloque Docker Hub V2 ausente"
+    assert "compose.hub.yaml" not in text
+    assert "-f compose" not in text
+    assert "docker compose up -d --pull always" in text
+    assert "docker compose up -d --build" in text
+    hub = [b for b in blocks if "up -d --pull always" in b]
+    assert hub, "bloque publicado V2 ausente"
     assert all("--profile" not in b for b in hub), \
-        "el stack Hub V2 no debe activar el perfil v1"
+        "el stack publicado V2 no debe activar el perfil v1"
     v1_ups = [b for b in blocks
               if "up -d --build" in b and "compose.hub.yaml" not in b
               and "autocrop --input" in b]

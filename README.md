@@ -168,29 +168,26 @@ docker run --rm --network none autocrop:latest python -c 'import sys, torch; pri
 El Dockerfile fija las dependencias Python directas y PyTorch CPU. La imagen
 base y las dependencias transitivas todavía pueden cambiar entre builds.
 
-### Usar una imagen de Docker Hub
+### Usar la imagen publicada
 
-Con una imagen publicada, indicar su nombre completo, incluido usuario y tag.
-Compose conserva Redis y RustFS y descarga la imagen de Autocrop en lugar de
-construirla localmente:
-
-```bash
-export AUTOCROP_IMAGE=tu-usuario/autocrop:0.1.0
-docker compose -f compose.yaml -f compose.hub.yaml up -d
-```
-
-Para preparar una publicación multiarch, reemplazar `tu-usuario` por el
-namespace propio en Docker Hub y ejecutar desde la raíz:
+Desde la raíz del repositorio, con la imagen publicada (`mondin0/autocrop:latest`,
+valor predeterminado de `AUTOCROP_IMAGE` en `.env`), levantar el stack V2 sin
+construir localmente:
 
 ```bash
-docker buildx build --platform linux/amd64,linux/arm64 \
-  --tag tu-usuario/autocrop:0.1.0 \
-  --tag tu-usuario/autocrop:latest --push .
+docker compose up -d --pull always
 ```
 
-El tag versionado permite conservar una versión concreta; `latest` sigue la
-publicación más reciente. Para volver al build local, usar los comandos de la
-sección Docker sin `compose.hub.yaml`.
+Para desarrollo local con el código del checkout, construir la imagen en el
+equipo en lugar de descargar la publicada:
+
+```bash
+docker compose up -d --build
+```
+
+Para fijar otra etiqueta, cambiar `AUTOCROP_IMAGE` en `.env`. La publicación
+de imágenes es una operación manual externa a esta etapa. Para volver al build
+local, usar los comandos de la sección Docker.
 
 ## Demo local V2 con Docker Compose
 
