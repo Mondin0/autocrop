@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import html
 import math
 import os
 import pathlib
 import tempfile
 import zipfile
 from collections.abc import Callable
+from urllib.parse import quote
 
 from app.processor import process_folder
 
@@ -17,6 +19,8 @@ MAX_ENTRIES = 10_000
 
 _JPEG_SUFFIXES = frozenset({".jpg", ".jpeg"})
 _CHUNK = 1024 * 1024
+_ORIGINALS_DIR = "originals"
+_REPORT_NAME = "reporte.html"
 
 
 def _fail(message: str) -> ValueError:
@@ -55,6 +59,85 @@ def _check_jpeg_name(name: str) -> None:
         raise _fail(f"unsafe entry name: {name!r}")
     if pathlib.PurePath(name).name != name:
         raise _fail(f"unsafe entry name: {name!r}")
+
+
+def _review_reasons(
+    log_path: pathlib.Path, review_names: list[str]
+) -> dict[str, str]:
+    """Map reviewed photo name to the reason already recorded in review.log.
+
+    ``process_folder()`` writes one ``name: reason`` record per reviewed photo
+    in sorted name order and reasons contain no newline. Walking that known
+    order keeps names containing newlines intact instead of splitting lines.
+    """
+    if not log_path.is_file():
+        return {}
+    text = log_path.read_text(encoding="utf-8")
+    reasons: dict[str, str] = {}
+    position = 0
+    for name in review_names:
+        prefix = f"{name}: "
+        if not text.startswith(prefix, position):
+            continue
+        end = text.find("\n", position + len(prefix))
+        if end < 0:
+            end = len(text)
+        reasons[name] = text[position + len(prefix):end]
+        position = end + 1
+    return reasons
+
+
+def _href(path: str) -> str:
+    return html.escape(quote(path), quote=True)
+
+
+def _build_report(
+    names: list[str],
+    out_dir: pathlib.Path,
+    reasons: dict[str, str],
+) -> bytes:
+    """Render the offline Spanish report from the processor's real outputs."""
+    rows: list[str] = []
+    saved = 0
+    review = 0
+    for name in names:
+        original = _href(f"{_ORIGINALS_DIR}/{name}")
+        if (out_dir / name).is_file():
+            saved += 1
+            links = (f'<a href="{original}">original</a> '
+                     f'<a href="{_href(name)}">recorte</a>')
+            state = "guardada"
+            motivo = ""
+        else:
+            review += 1
+            links = (f'<a href="{original}">original</a> '
+                     f'<a href="{_href(f"review/{name}")}">revisión</a>')
+            state = "en revisión"
+            motivo = html.escape(reasons.get(name, ""))
+        rows.append(
+            f'<tr><td class="foto">{html.escape(name)}</td>'
+            f'<td class="estado">{state}</td>'
+            f'<td class="motivo">{motivo}</td>'
+            f'<td class="archivos">{links}</td></tr>')
+    document = (
+        "<!DOCTYPE html>\n"
+        '<html lang="es">\n<head>\n<meta charset="utf-8">\n'
+        "<title>Reporte de Autocrop</title>\n"
+        "<style>\n"
+        "body { font-family: sans-serif; margin: 2rem; }\n"
+        "table { border-collapse: collapse; }\n"
+        "th, td { border: 1px solid #888; padding: 0.35rem 0.6rem; "
+        "text-align: left; }\n"
+        "</style>\n</head>\n<body>\n"
+        "<h1>Reporte de Autocrop</h1>\n"
+        f"<p>Fotos procesadas: {len(names)}. Guardadas: {saved}. "
+        f"En revisión: {review}.</p>\n"
+        "<table>\n<thead>\n<tr><th>Foto</th><th>Estado</th><th>Motivo</th>"
+        "<th>Archivos</th></tr>\n</thead>\n<tbody>\n"
+        + "\n".join(rows)
+        + "\n</tbody>\n</table>\n</body>\n</html>\n"
+    )
+    return document.encode("utf-8")
 
 
 def process_archive(
@@ -152,7 +235,17 @@ def process_archive(
             files = sorted(
                 p.relative_to(out_dir).as_posix()
                 for p in out_dir.rglob("*") if p.is_file())
-            arcs = sorted(set(files) | {"review/"})
+            entries: dict[str, pathlib.Path | bytes] = {
+                name: out_dir / name for name in files}
+            photo_names = sorted(info.filename for info in candidates)
+            for name in photo_names:
+                entries[f"{_ORIGINALS_DIR}/{name}"] = in_dir / name
+            reviewed = [name for name in photo_names
+                        if not (out_dir / name).is_file()]
+            entries[_REPORT_NAME] = _build_report(
+                photo_names, out_dir,
+                _review_reasons(out_dir / "review.log", reviewed))
+            arcs = sorted(set(entries) | {"review/"})
             tmp_out = None
             try:
                 fd, tmp_name = tempfile.mkstemp(
@@ -168,7 +261,11 @@ def process_archive(
                                 info.external_attr = (0o40775 << 16)
                                 out_zf.writestr(info, b"")
                             else:
-                                out_zf.write(out_dir / arc, arc)
+                                source = entries[arc]
+                                if isinstance(source, bytes):
+                                    out_zf.writestr(arc, source)
+                                else:
+                                    out_zf.write(source, arc)
                 try:
                     os.link(tmp_out, output_zip)
                 except FileExistsError as exc:

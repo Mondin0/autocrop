@@ -114,7 +114,15 @@ def test_valid_zip_matches_process_folder(tmp_path):
         if p.is_file():
             expected_files[p.relative_to(expected_dir).as_posix()] = p.read_bytes()
     with zipfile.ZipFile(output_zip) as zf:
-        got = {n: zf.read(n) for n in zf.namelist() if not n.endswith("/")}
+        names = zf.namelist()
+        # V2-13 supersedes the exact-contents parity: legacy outputs stay equal
+        # and originals/reporte.html are asserted separately below.
+        got = {n: zf.read(n) for n in names
+               if not n.endswith("/") and n != "reporte.html"
+               and not n.startswith("originals/")}
+        assert zf.read("originals/a.jpg") == img_a
+        assert zf.read("originals/b.jpg") == img_b
+        assert "reporte.html" in names
     assert got == expected_files
 
 

@@ -32,6 +32,8 @@ Un fotógrafo levanta Docker Compose en su computadora Linux, abre una página l
 
 12. [Selección automática de sujetos y formaciones](12-seleccion-fotografica/plan.md): preservar equipos y seleccionar protagonistas con evidencia visual en el motor compartido.
 
+13. [Originales y reporte en el ZIP](13-originales-y-reporte/plan.md): incluir los JPEG originales y un reporte HTML que los vincule con sus recortes o documente los motivos de revisión.
+
 ## Ruta de cierre propuesta el 2026-10-14
 
 Las etapas 01–06 están completadas según sus registros. A pedido del usuario se definen ahora todos los contratos restantes para el alcance de demo privada local, sin implementar etapas futuras por adelantado. V2-07 está completada desde el 2026-10-14, con evidencia en su [registro](07-transferencias-acotadas/registro.md). V2 todavía no se declara cerrada: faltan las etapas propuestas 08–10 y su aceptación integral. No se agregan autenticación, publicación, historial, cancelación, nuevos parámetros de recorte ni soporte Mac V2.
