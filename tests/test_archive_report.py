@@ -114,6 +114,9 @@ def test_mixed_report_has_ordered_rows_links_and_reasons(tmp_path):
     assert 'lang="es"' in report
     assert "<h1>Reporte de Autocrop</h1>" in report
     assert "Fotos procesadas: 4. Guardadas: 2. En revisión: 2." in report
+    assert report.index("Cómo leer este reporte") < report.index("<table>")
+    for reason in ("ambiguous_subject", "no_valid_crop", "no_person", "unreadable"):
+        assert f"<code>{reason}</code>" in report
     assert not re.search(r"https?://|url\(|<script|<link|<img|\ssrc=", report)
 
     assert report_cells(report, "foto") == [
