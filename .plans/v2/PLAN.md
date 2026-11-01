@@ -30,6 +30,8 @@ Un fotógrafo levanta Docker Compose en su computadora Linux, abre una página l
 10. [Validación integral y cierre](10-validacion-cierre/plan.md): navegador y servicios reales, corpus fotográfico, lote grande, reinicio y expiración.
 11. [Despliegue simple](11-despliegue-simple/plan.md): consumir la imagen V2 publicada desde el Compose principal y documentar el arranque publicado y el build local sin overlay.
 
+12. [Selección automática de sujetos y formaciones](12-seleccion-fotografica/plan.md): preservar equipos y seleccionar protagonistas con evidencia visual en el motor compartido.
+
 ## Ruta de cierre propuesta el 2026-10-14
 
 Las etapas 01–06 están completadas según sus registros. A pedido del usuario se definen ahora todos los contratos restantes para el alcance de demo privada local, sin implementar etapas futuras por adelantado. V2-07 está completada desde el 2026-10-14, con evidencia en su [registro](07-transferencias-acotadas/registro.md). V2 todavía no se declara cerrada: faltan las etapas propuestas 08–10 y su aceptación integral. No se agregan autenticación, publicación, historial, cancelación, nuevos parámetros de recorte ni soporte Mac V2.

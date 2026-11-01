@@ -1,9 +1,10 @@
-"""Image processing pipeline (stage 03).
+"""Image processing pipeline (stage 03, target selection V2-12).
 
 Opens JPEGs, applies EXIF orientation, detects people with a duck-typed
-detector, selects the largest-area subject, computes the crop and saves it.
-Photos without a person, without a valid crop, or unreadable are copied
-unchanged to ``review/`` with a logged reason; originals are never modified.
+detector, selects the target, computes the crop and saves it. Photos without
+a person, with an ambiguous subject, without a valid crop, or unreadable are
+copied unchanged to ``review/`` with a logged reason; originals are never
+modified.
 """
 
 from __future__ import annotations
@@ -16,7 +17,7 @@ from collections.abc import Callable
 from PIL import Image, ImageOps
 
 from app.crop import calculate_crop
-from app.subject import select_subject
+from app.subject import GROUP_RATIO, select_target
 
 _JPEG_SUFFIXES = frozenset({".jpg", ".jpeg"})
 _REVIEW_LOG = "review.log"
@@ -145,12 +146,17 @@ def _execute(
         return ("review", "unreadable",
                 {"boxes": [], "subject": None, "crop": None})
     boxes = detector.detect_people(image)  # type: ignore[union-attr]
-    subject = select_subject(boxes)
-    if subject is None:
+    subject, reason = select_target(image, boxes)
+    if reason in ("no_person", "ambiguous_subject"):
         shutil.copy2(image_path, review_dir / name)
-        return ("review", "no_person",
+        return ("review", reason,
                 {"boxes": list(boxes), "subject": None, "crop": None})
-    effective = ratio if ratio is not None else default_ratio(*image.size)
+    if ratio is not None:
+        effective = ratio
+    elif reason == "group":
+        effective = GROUP_RATIO
+    else:
+        effective = default_ratio(*image.size)
     crop = calculate_crop(image.width, image.height, subject, effective, margin)
     if crop is None:
         shutil.copy2(image_path, review_dir / name)

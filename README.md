@@ -56,29 +56,72 @@ python -m app.cli --input ./fotos --output ./output
   insensibles a mayúsculas). Si no existe o no es directorio, falla sin crear nada.
 - `--output` (requerido): se crea si no existe; guarda un JPEG recortado
   (`quality=95`) por foto con el mismo nombre base.
-- `--ratio W:H` (opcional): proporción fija para todo el lote, p. ej. `3:2`.
-  Ausente: automática por imagen (3:2 horizontal, 2:3 vertical, 1:1 cuadrada).
+- `--ratio W:H` (opcional): proporción fija para todo el lote, p. ej. `3:2`;
+  siempre prevalece sobre la automática.
+- Ausente: una formación (grupo) usa `3:2`; un sujeto individual conserva la
+  proporción automática por orientación (3:2 horizontal, 2:3 vertical, 1:1
+  cuadrada).
 - `--margin F` (opcional, default `0.15`): margen finito `>= 0` alrededor del sujeto.
 - El detector es `yolo11n.pt` del directorio actual con `confidence=0.25`.
-- Fotos sin persona, sin recorte válido o ilegibles se copian sin modificar a
-  `output/review/` con el motivo en `output/review.log`; el lote termina en `0`.
+- Fotos sin persona, con sujeto ambiguo, sin recorte válido o ilegibles se
+  copian sin modificar a `output/review/` con el motivo en `output/review.log`;
+  el lote termina en `0`.
 - Archivos no-JPEG se omiten con aviso por consola, sin ir a `output/review/` ni al log.
+
+## Selección de sujeto (V2-12)
+
+- `app.subject.select_target(image, boxes)` devuelve `(caja | None, motivo)` con
+  los motivos `individual`, `group`, `no_person` y `ambiguous_subject`
+  (los dos últimos sin caja). `select_subject(boxes)` conserva el contrato
+  histórico por mayor área para consumidores directos; el procesador compartido
+  por la CLI y V2 usa `select_target`.
+- **Formaciones:** una fila de al menos tres detecciones de escala coherente,
+  con fondos alineados (tolerancia anclada al primer fondo de la fila) y centros
+  separados define la formación principal. Se toleran dos filas, oclusiones
+  parciales y detecciones duplicadas (se fusionan); una jugada compacta, una
+  pareja o una fila de tres con alturas muy dispares no agrupan y pasan a
+  selección individual. La envolvente incluye las cajas cortas de cabeza o
+  torso junto con sus cuerpos y las filas que se solapan, para no cortar cuerpos
+  ni extremidades. Una detección aislada o de otra escala no se incorpora: la
+  exclusión de espectadores está garantizada para esos casos, no como promesa
+  universal; una detección que solape realmente al equipo puede quedar dentro de
+  la envolvente.
+- **Individuales:** la nitidez medida en la caja (varianza laplaciana) es la
+  evidencia principal; el área relativa y la cercanía al centro de la imagen
+  actúan como desempate. El más nítido no gana automáticamente y un primer
+  plano grande pero menos definido no supera a un protagonista claramente más
+  nítido. Las detecciones poco relevantes por tamaño se descartan antes de
+  normalizar la nitidez: no puntúan, no ganan y no reducen la evidencia de los
+  candidatos relevantes. Un empate cercano produce `ambiguous_subject`, sin
+  recorte; si el líder además domina el tamaño y la posición por el margen de
+  empate y conserva al menos el 80 % del foco del más nítido, se elige como
+  sujeto individual, porque no es un duelo real.
+- `ambiguous_subject` se registra en `review.log` y el original se copia intacto
+  a `review/`; los contadores y el ZIP mantienen su formato. Un error de
+  detección o de cálculo nunca se convierte en ambigüedad: propaga la excepción.
+- Límites: los umbrales internos (agrupación, nitidez, empate) están definidos
+  en `app/subject.py` y requieren calibración con fotografías reales; no hay
+  garantía de acierto para todos los deportes o encuadres. Revisar siempre
+  `review/`.
 
 ```python
 from pathlib import Path
 from PIL import Image, ImageOps
 from app.detector import YOLODetector
-from app.subject import select_subject
+from app.processor import default_ratio
+from app.subject import GROUP_RATIO, select_target
 from app.crop import calculate_crop
 
 detector = YOLODetector(Path("yolo11n.pt"), confidence=0.25)
-image = ImageOps.exif_transpose(Image.open("foto.jpg"))  # el procesador (etapa 03) asume RGB + orientación EXIF
-boxes = detector.detect_people(image.convert("RGB"))
-subject = select_subject(boxes)
+opened = ImageOps.exif_transpose(Image.open("foto.jpg"))  # el procesador (etapa 03) asume RGB + orientación EXIF
+image = opened.convert("RGB")
+boxes = detector.detect_people(image)
+subject, reason = select_target(image, boxes)
 if subject is None:
-    print("sin personas: gestionado por app.processor (etapa 03)")
+    print(f"sin recorte automático: {reason}")  # no_person o ambiguous_subject
 else:
-    res = calculate_crop(image.width, image.height, subject, (1, 1), 0.15)
+    ratio = GROUP_RATIO if reason == "group" else default_ratio(*image.size)
+    res = calculate_crop(image.width, image.height, subject, ratio, 0.15)
 ```
 
 ## Pesos del modelo
