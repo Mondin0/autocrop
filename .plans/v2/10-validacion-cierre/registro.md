@@ -345,3 +345,40 @@ Pendientes ajenos: `test_f3_asgi_send_failure_cleans_temp` /
 `test_f3_asgi_cancelled_cleans_temp` solo fallan si
 `test_v209_consistent.py` corre antes (interferencia preexistente en árbol
 limpio); en orden de suite pasan (exit 0).
+
+### Seguimiento — expectativas del límite de 2 GiB (2026-11-02)
+
+La nota anterior de tres fallos por expectativas de 500 MiB quedó obsoleta:
+en el checkout actual, `test_rejects_compressed_limit`,
+`test_upload_errors_readable_and_allow_retry` y
+`test_page_hints_single_job_and_safe_rendering` ya esperan 2 GiB. No hizo
+falta cambiar código ni tests en este seguimiento.
+
+Verificación independiente:
+
+```
+.venv/bin/python -m pytest tests/test_archive.py::test_rejects_compressed_limit tests/test_v209_consistent.py::test_upload_errors_readable_and_allow_retry tests/test_v209_consistent.py::test_page_hints_single_job_and_safe_rendering -q
+→ 3 passed
+```
+
+```
+.venv/bin/python -m pytest -p no:warnings
+→ 638 passed, 1 skipped in 50.72s
+```
+
+La suite completa ya no tiene esos tres fallos. F2 continúa pendiente según
+la matriz anterior; este seguimiento no cambia el estado de V2-10.
+
+### Cierre de F2 y V2-10 (2026-11-02)
+
+El usuario confirma que F2 ya fue validado con el ZIP real de un evento de
+fútbol, con fotos variadas, procesado para que el fotógrafo importe el lote en
+Lightroom y evalúe los resultados según su criterio. Se acepta esa validación
+práctica como evidencia de corpus real y revisión fotográfica; las imágenes
+privadas no se incorporan al repositorio.
+
+La suite completa queda verde (638 passed, 1 skipped) y el seguimiento previo
+confirma que las expectativas de 2 GiB ya estaban actualizadas. Con F2
+confirmado por el usuario, no quedan criterios abiertos de V2-10. La revisión
+independiente previa y las comprobaciones repetidas en esta sesión satisfacen
+T3. Estado: etapa completada.

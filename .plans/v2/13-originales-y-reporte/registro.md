@@ -217,3 +217,19 @@ del contrato.
 
 - Pendiente de revisión independiente del contrato actualizado. No se modificó
   V1, el motor, el contrato HTTP ni dependencias.
+
+#### Revisión independiente y cierre del contrato actualizado
+
+- **F1–F4, T1–T2 verificados.** El ZIP mantiene originales en la raíz y agrega
+  los recortes con sufijo `-crop`; el reporte lista solo las fotos en revisión,
+  con motivo y enlace al original. La implementación escapa contenido HTML,
+  ordena entradas y rechaza colisiones antes de procesar.
+- Verificación independiente: `.venv/bin/python -m pytest
+  tests/test_archive_report.py tests/test_archive.py -q` → pruebas focales
+  aprobadas; `.venv/bin/python -m pytest -p no:warnings` → `638 passed, 1
+  skipped`; `git diff --check` → limpio.
+- Validación práctica reportada por el usuario: se procesó manualmente un ZIP
+  de un evento de fútbol con fotos variadas, para que el fotógrafo importe el
+  conjunto en Lightroom y evalúe los recortes según su criterio. Esta valida el
+  flujo de uso real; no se afirma una inspección independiente de ese ZIP.
+- No quedan hallazgos abiertos. Estado de etapa: completada.

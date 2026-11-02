@@ -1,6 +1,6 @@
 # Etapa V2-13 — Originales y reporte en el ZIP
 
-Estado: en revisión
+Estado: completada
 
 Dependencias: V2-01, V2-03 y V2-07 completadas; decisiones compartidas en [V2](../PLAN.md).
 

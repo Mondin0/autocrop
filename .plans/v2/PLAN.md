@@ -36,7 +36,7 @@ Un fotógrafo levanta Docker Compose en su computadora Linux, abre una página l
 
 ## Ruta de cierre propuesta el 2026-10-14
 
-Las etapas 01–06 están completadas según sus registros. A pedido del usuario se definen ahora todos los contratos restantes para el alcance de demo privada local, sin implementar etapas futuras por adelantado. V2-07 está completada desde el 2026-10-14, con evidencia en su [registro](07-transferencias-acotadas/registro.md). V2 todavía no se declara cerrada: faltan las etapas propuestas 08–10 y su aceptación integral. No se agregan autenticación, publicación, historial, cancelación, nuevos parámetros de recorte ni soporte Mac V2.
+Actualización 2026-11-02: las etapas V2-01–V2-13 están completadas según sus registros y V2 queda cerrada para nuevas funcionalidades; solo se aceptan fixes. El alcance sigue siendo la demo privada local, no un servicio público. La publicación remota con acceso Zero Trust y la bandeja de ZIPs se consideran para V3.
 
 La lectura del código identifica transferencias completas en `JobService.run_next()`/`result_bytes()`, limpieza solo ociosa y borrados fallidos silenciados en `cleanup()`, reclamación no durable con `lpop()` y sondeo concurrente sin descarte de respuestas antiguas en `frontend/index.html`. Estos son motivos de los nuevos contratos, no resultados de implementación. Las evidencias históricas no se modifican.
 
