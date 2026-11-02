@@ -75,7 +75,7 @@ def build_mixed_zip(tmp_path):
     return sizes, saved, payloads, stub, src
 
 
-# --- F1: original bytes under originals/ -------------------------------------
+# --- F1: originals and crops together at the ZIP root ------------------------
 
 
 def test_mixed_batch_keeps_originals_bytes_and_existing_outputs(tmp_path):
@@ -89,13 +89,14 @@ def test_mixed_batch_keeps_originals_bytes_and_existing_outputs(tmp_path):
     with zipfile.ZipFile(out) as zf:
         listed = zf.namelist()
         files = {n: zf.read(n) for n in listed if not n.endswith("/")}
-        assert {"reporte.html", "review.log", "review/",
-                "originals.jpg", "review/reporte.html.jpg"} <= set(listed)
+        assert {"reporte.html", "foto <b>&\"sol\" 'playa'-crop.jpg",
+                "originals.jpg"} <= set(listed)
         for name in sizes:
-            path = f"originals/{name}"
-            assert listed.count(path) == 1
-            assert files[path] == payloads[name]
-        assert "review/originals.jpg" not in listed
+            assert listed.count(name) == 1
+            assert files[name] == payloads[name]
+        assert "review/" not in listed and "review.log" not in listed
+        assert "review/reporte.html.jpg" not in listed
+        assert "foto <b>&\"sol\" 'playa'-crop.jpg" in files
         assert listed == sorted(listed)
 
 
@@ -113,33 +114,23 @@ def test_mixed_report_has_ordered_rows_links_and_reasons(tmp_path):
     assert report.startswith("<!DOCTYPE html>")
     assert 'lang="es"' in report
     assert "<h1>Reporte de Autocrop</h1>" in report
-    assert "Fotos procesadas: 4. Guardadas: 2. En revisión: 2." in report
-    assert report.index("Cómo leer este reporte") < report.index("<table>")
-    for reason in ("ambiguous_subject", "no_valid_crop", "no_person", "unreadable"):
-        assert f"<code>{reason}</code>" in report
+    assert "Fotos con fallas o en revisión: 2." in report
+    assert "Cómo leer este reporte" not in report
+    assert "no_person" in report
     assert not re.search(r"https?://|url\(|<script|<link|<img|\ssrc=", report)
 
-    assert report_cells(report, "foto") == [
-        html.escape(name) for name in ordered]
-    assert report_cells(report, "estado") == [
-        "guardada" if name in saved else "en revisión" for name in ordered]
-    assert report_cells(report, "motivo") == [
-        "" if name in saved else "no_person" for name in ordered]
+    failed = [name for name in ordered if name not in saved]
+    assert report_cells(report, "foto") == [html.escape(name) for name in failed]
+    assert report_cells(report, "motivo") == ["no_person"] * len(failed)
 
-    expected = set()
-    for name in ordered:
-        expected.add(f"originals/{name}")
-        if name in saved:
-            expected.add(name)
-        else:
-            expected.add(f"review/{name}")
+    expected = set(failed)
     hrefs = report_hrefs(report)
     assert set(hrefs) == expected
     assert len(hrefs) == len(expected)
     for href in hrefs:
         assert href in files
 
-    assert html.escape('foto <b>&"sol" \'playa\'.jpg') in report
+    assert html.escape("foto: rara <r> & 2.jpg") in report
     assert "<b>" not in report
 
 
@@ -162,14 +153,13 @@ def test_all_saved_batch_links_every_crop_and_never_review(tmp_path):
     files = zip_files(out)
     report = files["reporte.html"].decode("utf-8")
     hrefs = report_hrefs(report)
-    expected = {f"originals/{name}" for name in payloads} | set(payloads)
-    assert set(hrefs) == expected
-    for href in hrefs:
-        assert href in files
+    assert hrefs == []
     assert not any(href.startswith("review/") for href in hrefs)
-    assert "Guardadas: 3. En revisión: 0." in report
-    assert report_cells(report, "motivo") == ["", "", ""]
-    assert report_cells(report, "estado") == ["guardada"] * 3
+    assert "Fotos con fallas o en revisión: 0." in report
+    assert report_cells(report, "foto") == []
+    assert report_cells(report, "motivo") == []
+    assert {"a.jpg", "a-crop.jpg", "b.jpg", "b-crop.jpg",
+            "c.jpg", "c-crop.jpg"} <= set(files)
 
 
 def test_all_review_batch_links_review_copy_and_reason(tmp_path):
@@ -186,17 +176,14 @@ def test_all_review_batch_links_review_copy_and_reason(tmp_path):
     files = zip_files(out)
     report = files["reporte.html"].decode("utf-8")
     hrefs = report_hrefs(report)
-    expected = {f"originals/{name}" for name in payloads} | {
-        f"review/{name}" for name in payloads}
+    expected = set(payloads)
     assert set(hrefs) == expected
     for href in hrefs:
         assert href in files
-    assert not any(href in payloads for href in hrefs)
-    assert "Guardadas: 0. En revisión: 3." in report
+    assert "Fotos con fallas o en revisión: 3." in report
     assert report_cells(report, "motivo") == ["no_person"] * 3
-    assert report_cells(report, "estado") == ["en revisión"] * 3
-    for name in payloads:
-        assert files[f"review/{name}"] == payloads[name]
+    assert not any(name.startswith("review/") for name in files)
+    assert all(files[name] == payload for name, payload in payloads.items())
 
 
 def test_report_escapes_hostile_review_reason(tmp_path, monkeypatch):
@@ -219,9 +206,7 @@ def test_report_escapes_hostile_review_reason(tmp_path, monkeypatch):
     assert "<script>" not in report
     assert "&lt;script&gt;&amp;&quot;raro&quot;&lt;/script&gt;" in report
     assert html.escape(name) in report
-    assert ('href="originals/foto%3A%20%3Cx%3E%20%26%20%22y%22.jpg"'
-            in report)
-    assert ('href="review/foto%3A%20%3Cx%3E%20%26%20%22y%22.jpg"'
+    assert ('href="foto%3A%20%3Cx%3E%20%26%20%22y%22.jpg"'
             in report)
 
 
@@ -234,12 +219,11 @@ def test_review_name_with_newline_keeps_reason(tmp_path):
 
     assert summary == {"processed": 1, "saved": 0, "review": 1, "skipped": 0}
     files = zip_files(out)
-    assert files["review.log"].decode("utf-8") == f"{name}: no_person\n"
     report = files["reporte.html"].decode("utf-8")
     assert report_cells(report, "foto") == [html.escape(name)]
     assert report_cells(report, "motivo") == ["no_person"]
     hrefs = report_hrefs(report)
-    assert set(hrefs) == {f"originals/{name}", f"review/{name}"}
+    assert set(hrefs) == {name}
     for href in hrefs:
         assert href in files
 
@@ -265,13 +249,27 @@ def test_names_that_resemble_reserved_outputs_do_not_collide(tmp_path):
         files = {n: zf.read(n) for n in listed if not n.endswith("/")}
     assert len(listed) == len(set(listed))
     for name in names:
-        assert files[f"originals/{name}"] == payloads[name]
+        assert files[name] == payloads[name]
     assert files["reporte.html"].startswith(b"<!DOCTYPE html>")
     report = files["reporte.html"].decode("utf-8")
     for href in report_hrefs(report):
         assert href in files
     assert report_cells(report, "foto") == [
-        html.escape(name) for name in sorted(names)]
+        html.escape(name) for name in sorted(names)
+        if name not in {"originals.jpg", "reporte.html.jpg"}]
+
+
+def test_rejects_crop_name_collision_before_processing(tmp_path):
+    src = write_zip(tmp_path / "in.zip", {
+        "foto.jpg": make_jpg_bytes(800, 600),
+        "foto-crop.jpg": make_jpg_bytes(640, 480),
+    })
+    out = tmp_path / "out.zip"
+    with pytest.raises(ValueError, match="crop name collision"):
+        process_archive(src, out, Stub({
+            (800, 600): [(100, 100, 300, 300)],
+        }), None, 0.15)
+    assert not out.exists()
 
 
 # --- F4: no partial ZIP when packaging fails --------------------------------

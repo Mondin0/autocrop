@@ -184,3 +184,36 @@ git diff --check
   servidor temporal se cerró al terminar la revisión.
 - El hallazgo F2 de la entrega 1 queda corregido; no quedan hallazgos abiertos.
   Estado de etapa: completada.
+
+### Cambio de contrato — salida plana para Lightroom
+
+Se reemplaza el contrato previo de V2-13 a pedido del usuario: originales y
+recortes juntos en la raíz, recortes con sufijo `-crop`, sin carpeta/copias de
+revisión y reporte limitado a las fotos en revisión. La etapa vuelve a revisión;
+la evidencia histórica anterior se conserva como registro de la primera versión
+del contrato.
+
+#### Implementación
+
+- `app/archive.py`: los originales se escriben en la raíz sin alterar bytes;
+  cada recorte se empaqueta como `<base>-crop<ext>`. El empaquetado omite
+  `review/` y `review.log`, y el HTML lista únicamente las fotos revisadas con
+  su motivo y enlace al original. Las colisiones entre el nombre de un recorte
+  y cualquier original (sin distinguir mayúsculas) se rechazan antes del
+  procesamiento.
+- Tests ajustados en `tests/test_archive_report.py`, `tests/test_archive.py`,
+  `tests/test_api_worker.py` y `tests/test_processor_selection.py` para
+  estructura, bytes originales, nombres, motivos, ausencia de carpetas de
+  revisión y colisiones.
+- Tests primero: `.venv/bin/python -m pytest tests/test_archive_report.py -q`
+  → 8 fallos funcionales al contrastar el contrato nuevo con la implementación
+  anterior; luego suite focal de empaquetado → `32 passed, 1 skipped`.
+- Suite candidata final: `.venv/bin/python -m pytest -p no:warnings` →
+  `638 passed, 1 skipped`.
+- `.venv/bin/python -m pip check` → `No broken requirements found`.
+- `git diff --check` → sin salida (exit 0).
+
+#### Revisión
+
+- Pendiente de revisión independiente del contrato actualizado. No se modificó
+  V1, el motor, el contrato HTTP ni dependencias.

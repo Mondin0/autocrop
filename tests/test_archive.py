@@ -109,19 +109,16 @@ def test_valid_zip_matches_process_folder(tmp_path):
     summary = process_archive(input_zip, output_zip, stub2, None, 0.15)
     assert summary == expected
 
-    expected_files = {}
-    for p in expected_dir.rglob("*"):
-        if p.is_file():
-            expected_files[p.relative_to(expected_dir).as_posix()] = p.read_bytes()
+    expected_files = {
+        f"{p.stem}-crop{p.suffix}": p.read_bytes()
+        for p in expected_dir.glob("*.jpg")
+    }
     with zipfile.ZipFile(output_zip) as zf:
         names = zf.namelist()
-        # V2-13 supersedes the exact-contents parity: legacy outputs stay equal
-        # and originals/reporte.html are asserted separately below.
         got = {n: zf.read(n) for n in names
-               if not n.endswith("/") and n != "reporte.html"
-               and not n.startswith("originals/")}
-        assert zf.read("originals/a.jpg") == img_a
-        assert zf.read("originals/b.jpg") == img_b
+               if n.endswith("-crop.jpg")}
+        assert zf.read("a.jpg") == img_a
+        assert zf.read("b.jpg") == img_b
         assert "reporte.html" in names
     assert got == expected_files
 
@@ -142,7 +139,7 @@ def test_signature_matches_contract():
 # --- F2: output contents and originals intact --------------------------------
 
 
-def test_output_includes_review_and_preserves_input(tmp_path):
+def test_output_keeps_failed_original_and_success_crop_at_root(tmp_path):
     saved = make_jpg_bytes(800, 600)
     empty = make_jpg_bytes(500, 500, color=(10, 200, 10))
     stub = Stub(by_size={(800, 600): [(100, 100, 300, 300)],
@@ -155,11 +152,11 @@ def test_output_includes_review_and_preserves_input(tmp_path):
     assert summary == {"processed": 2, "saved": 1, "review": 1, "skipped": 0}
     assert sha(input_zip) == before
     names = zip_names(output_zip)
-    assert "s.jpg" in names
-    assert "review/" in names
-    assert "review/e.jpg" in names
-    assert "review.log" in names
-    assert zip_bytes(output_zip, "review/e.jpg") == empty
+    assert "s.jpg" in names and "s-crop.jpg" in names
+    assert "e.jpg" in names
+    assert not any(name.startswith("review/") for name in names)
+    assert "review.log" not in names
+    assert zip_bytes(output_zip, "e.jpg") == empty
     assert names == sorted(names)
 
 

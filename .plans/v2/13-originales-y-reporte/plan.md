@@ -1,6 +1,6 @@
 # Etapa V2-13 — Originales y reporte en el ZIP
 
-Estado: completada
+Estado: en revisión
 
 Dependencias: V2-01, V2-03 y V2-07 completadas; decisiones compartidas en [V2](../PLAN.md).
 
@@ -10,17 +10,17 @@ Incluir en el ZIP descargable de cada trabajo los JPEG originales y un reporte H
 
 ## Contrato y decisiones
 
-- El resultado de `process_archive()` mantiene su resumen y archivos existentes (recortes, `review/` y `review.log`) y agrega todos los JPEG aceptados de la entrada, byte por byte, bajo `originals/<nombre-original>`. Los originales permanecen inalterados.
-- Agrega `reporte.html` en la raíz del ZIP. El documento está en español, es legible sin conexión y no carga CSS, scripts, imágenes ni otros recursos externos. Presenta una fila por cada JPEG del lote, ordenada por nombre, con el nombre original y un enlace al original. Si el procesamiento lo guardó, muestra un enlace al recorte generado. Si quedó en revisión, muestra el motivo registrado por `process_folder()`/`review.log` y un enlace al archivo correspondiente en `review/`.
+- El ZIP de salida contiene todos los JPEG originales byte por byte en la raíz. Cada recorte exitoso también queda en la raíz con nombre `<base>-crop<ext>`; las fotos en revisión quedan solo como original, sin carpetas ni copias adicionales. Se rechaza el lote si un nombre de recorte colisiona (sin distinguir mayúsculas) con otro original.
+- Agrega `reporte.html` en la raíz del ZIP. El documento está en español, es legible sin conexión y no carga recursos externos. Incluye únicamente filas para fotos en revisión, ordenadas por nombre, con motivo registrado por `process_folder()`/`review.log` y enlace al original.
 - El estado y motivo se derivan de las salidas existentes del procesador; no se vuelve a ejecutar detección ni se infiere un motivo distinto. Todo nombre mostrado se escapa como texto HTML y los enlaces apuntan a rutas relativas dentro del ZIP.
 - Si el lote falla antes de producir un resultado válido, se conserva el comportamiento actual: no se publica ZIP parcial. No cambia la validación de entrada, límites, estados de trabajo, API de descarga ni limpieza temporal.
 
 ## Criterios
 
-- **F1:** todo original JPEG incluido en la entrada aparece una vez bajo `originals/` en el ZIP final y conserva exactamente sus bytes; las salidas existentes permanecen.
-- **F2:** `reporte.html` contiene una fila y enlace al original por foto procesada; cada éxito enlaza al recorte y cada revisión muestra su motivo y enlace a `review/<nombre>`.
+- **F1:** todo original JPEG aparece una vez en la raíz con bytes idénticos; cada éxito tiene un recorte raíz `<base>-crop<ext>`; una revisión queda solo como original.
+- **F2:** `reporte.html` contiene solo las fotos en revisión, con el motivo registrado y enlace al original; si no hay fallas, no hay filas de fotos.
 - **F3:** el reporte funciona como HTML local sin recursos externos, escapa nombres y motivos y sus enlaces relativos resuelven a entradas existentes del ZIP.
-- **F4:** ZIP de entrada inválido o fallo de lote no deja un ZIP final parcial; el resumen de procesamiento y contrato HTTP existentes no cambian.
+- **F4:** ZIP inválido, fallo de lote o colisión de nombre no deja un ZIP final parcial; colisiones se rechazan antes de procesar. El resumen y contrato HTTP existentes no cambian.
 - **T1:** empaquetado determinista, sin dependencias nuevas ni cambios a V1; evitar recalcular recortes o modificar originales.
 - **T2:** tests primero con fallo funcional observado; tests focales, suite completa, `pip check` y `git diff --check` desde `.venv`.
 

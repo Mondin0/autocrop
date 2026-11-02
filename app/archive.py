@@ -19,7 +19,6 @@ MAX_ENTRIES = 10_000
 
 _JPEG_SUFFIXES = frozenset({".jpg", ".jpeg"})
 _CHUNK = 1024 * 1024
-_ORIGINALS_DIR = "originals"
 _REPORT_NAME = "reporte.html"
 
 
@@ -93,32 +92,16 @@ def _href(path: str) -> str:
 
 def _build_report(
     names: list[str],
-    out_dir: pathlib.Path,
     reasons: dict[str, str],
 ) -> bytes:
-    """Render the offline Spanish report from the processor's real outputs."""
+    """Render only failures from the processor's recorded review reasons."""
     rows: list[str] = []
-    saved = 0
-    review = 0
     for name in names:
-        original = _href(f"{_ORIGINALS_DIR}/{name}")
-        if (out_dir / name).is_file():
-            saved += 1
-            links = (f'<a href="{original}">original</a> '
-                     f'<a href="{_href(name)}">recorte</a>')
-            state = "guardada"
-            motivo = ""
-        else:
-            review += 1
-            links = (f'<a href="{original}">original</a> '
-                     f'<a href="{_href(f"review/{name}")}">revisión</a>')
-            state = "en revisión"
-            motivo = html.escape(reasons.get(name, ""))
         rows.append(
             f'<tr><td class="foto">{html.escape(name)}</td>'
-            f'<td class="estado">{state}</td>'
-            f'<td class="motivo">{motivo}</td>'
-            f'<td class="archivos">{links}</td></tr>')
+            f'<td class="motivo">{html.escape(reasons.get(name, ""))}</td>'
+            f'<td class="archivos"><a href="{_href(name)}">original</a>'
+            "</td></tr>")
     document = (
         "<!DOCTYPE html>\n"
         '<html lang="es">\n<head>\n<meta charset="utf-8">\n'
@@ -131,24 +114,8 @@ def _build_report(
         "section { max-width: 60rem; margin: 1rem 0 1.5rem; }\n"
         "</style>\n</head>\n<body>\n"
         "<h1>Reporte de Autocrop</h1>\n"
-        f"<p>Fotos procesadas: {len(names)}. Guardadas: {saved}. "
-        f"En revisión: {review}.</p>\n"
-        "<section>\n<h2>Cómo leer este reporte</h2>\n<ul>\n"
-        "<li><strong>guardada</strong>: se generó un recorte en la raíz "
-        "del ZIP. En «Archivos» están el original y el recorte.</li>\n"
-        "<li><strong>en revisión</strong>: no se recortó. El original se "
-        "copió intacto a <code>review/</code>; el motivo aparece en la tabla "
-        "y en <code>review.log</code>.</li>\n</ul>\n"
-        "<p>Motivos de revisión:</p>\n<ul>\n"
-        "<li><code>no_valid_crop</code>: se eligió al sujeto, pero no existe "
-        "un recorte con la proporción exacta que lo contenga completo.</li>\n"
-        "<li><code>ambiguous_subject</code>: hay varios candidatos y no se "
-        "puede decidir con suficiente confianza a quién recortar.</li>\n"
-        "<li><code>no_person</code>: no se detectaron personas en la foto.</li>\n"
-        "<li><code>unreadable</code>: la imagen no se pudo abrir.</li>\n"
-        "</ul>\n<p><code>originals/</code> conserva una copia intacta de "
-        "todas las fotos del lote.</p>\n</section>\n"
-        "<table>\n<thead>\n<tr><th>Foto</th><th>Estado</th><th>Motivo</th>"
+        f"<p>Fotos con fallas o en revisión: {len(names)}.</p>\n"
+        "<table>\n<thead>\n<tr><th>Foto</th><th>Motivo</th>"
         "<th>Archivos</th></tr>\n</thead>\n<tbody>\n"
         + "\n".join(rows)
         + "\n</tbody>\n</table>\n</body>\n</html>\n"
@@ -215,6 +182,15 @@ def process_archive(
             if key in seen:
                 raise _fail(f"duplicate name: {info.filename!r}")
             seen[key] = info.filename
+        crop_names = {
+            name: f"{pathlib.PurePosixPath(name).stem}-crop"
+                   f"{pathlib.PurePosixPath(name).suffix}"
+            for name in seen.values()
+        }
+        originals = {name.lower() for name in seen.values()}
+        for name, crop_name in crop_names.items():
+            if crop_name.lower() in originals:
+                raise _fail(f"crop name collision: {crop_name!r}")
 
         with tempfile.TemporaryDirectory() as in_tmp, \
                 tempfile.TemporaryDirectory() as out_tmp:
@@ -248,20 +224,18 @@ def process_archive(
             summary = process_folder(
                 in_dir, out_dir, detector, ratio, margin, on_progress)
 
-            files = sorted(
-                p.relative_to(out_dir).as_posix()
-                for p in out_dir.rglob("*") if p.is_file())
-            entries: dict[str, pathlib.Path | bytes] = {
-                name: out_dir / name for name in files}
             photo_names = sorted(info.filename for info in candidates)
+            entries: dict[str, pathlib.Path | bytes] = {}
             for name in photo_names:
-                entries[f"{_ORIGINALS_DIR}/{name}"] = in_dir / name
+                entries[name] = in_dir / name
+                if (out_dir / name).is_file():
+                    entries[crop_names[name]] = out_dir / name
             reviewed = [name for name in photo_names
                         if not (out_dir / name).is_file()]
             entries[_REPORT_NAME] = _build_report(
-                photo_names, out_dir,
+                reviewed,
                 _review_reasons(out_dir / "review.log", reviewed))
-            arcs = sorted(set(entries) | {"review/"})
+            arcs = sorted(entries)
             tmp_out = None
             try:
                 fd, tmp_name = tempfile.mkstemp(
@@ -272,16 +246,11 @@ def process_archive(
                     with zipfile.ZipFile(
                             fh, "w", zipfile.ZIP_DEFLATED) as out_zf:
                         for arc in arcs:
-                            if arc == "review/":
-                                info = zipfile.ZipInfo("review/")
-                                info.external_attr = (0o40775 << 16)
-                                out_zf.writestr(info, b"")
+                            source = entries[arc]
+                            if isinstance(source, bytes):
+                                out_zf.writestr(arc, source)
                             else:
-                                source = entries[arc]
-                                if isinstance(source, bytes):
-                                    out_zf.writestr(arc, source)
-                                else:
-                                    out_zf.write(source, arc)
+                                out_zf.write(source, arc)
                 try:
                     os.link(tmp_out, output_zip)
                 except FileExistsError as exc:
