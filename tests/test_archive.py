@@ -109,16 +109,11 @@ def test_valid_zip_matches_process_folder(tmp_path):
     summary = process_archive(input_zip, output_zip, stub2, None, 0.15)
     assert summary == expected
 
-    expected_files = {
-        f"{p.stem}-crop{p.suffix}": p.read_bytes()
-        for p in expected_dir.glob("*.jpg")
-    }
+    expected_files = {p.name: p.read_bytes() for p in expected_dir.glob("*.jpg")}
     with zipfile.ZipFile(output_zip) as zf:
         names = zf.namelist()
-        got = {n: zf.read(n) for n in names
-               if n.endswith("-crop.jpg")}
-        assert zf.read("a.jpg") == img_a
-        assert zf.read("b.jpg") == img_b
+        got = {n: zf.read(n) for n in names if n.endswith(".jpg")}
+        assert "a-crop.jpg" not in names and "b-crop.jpg" not in names
         assert "reporte.html" in names
     assert got == expected_files
 
@@ -139,7 +134,7 @@ def test_signature_matches_contract():
 # --- F2: output contents and originals intact --------------------------------
 
 
-def test_output_keeps_failed_original_and_success_crop_at_root(tmp_path):
+def test_output_keeps_failed_original_and_replaces_success_with_crop(tmp_path):
     saved = make_jpg_bytes(800, 600)
     empty = make_jpg_bytes(500, 500, color=(10, 200, 10))
     stub = Stub(by_size={(800, 600): [(100, 100, 300, 300)],
@@ -152,11 +147,12 @@ def test_output_keeps_failed_original_and_success_crop_at_root(tmp_path):
     assert summary == {"processed": 2, "saved": 1, "review": 1, "skipped": 0}
     assert sha(input_zip) == before
     names = zip_names(output_zip)
-    assert "s.jpg" in names and "s-crop.jpg" in names
+    assert "s.jpg" in names and "s-crop.jpg" not in names
     assert "e.jpg" in names
     assert not any(name.startswith("review/") for name in names)
     assert "review.log" not in names
     assert zip_bytes(output_zip, "e.jpg") == empty
+    assert zip_bytes(output_zip, "s.jpg") != saved
     assert names == sorted(names)
 
 
@@ -300,7 +296,7 @@ def test_rejects_declared_uncompressed_limit(tmp_path, monkeypatch):
     monkeypatch.setattr(archive, "MAX_TOTAL_UNCOMPRESSED", 10)
     out = tmp_path / "out.zip"
     check_rejected(input_zip, out, Stub(), None, 0.15,
-                   ValueError, "2 GiB")
+                   ValueError, "5 GiB")
     assert not out.exists()
 
 
@@ -312,8 +308,25 @@ def test_rejects_compressed_limit(tmp_path, monkeypatch):
     monkeypatch.setattr(archive, "MAX_INPUT_BYTES", 10)
     out = tmp_path / "out.zip"
     check_rejected(input_zip, out, Stub(), None, 0.15,
-                   ValueError, "2 GiB")
+                   ValueError, "5 GiB")
     assert not out.exists()
+
+
+def test_compressed_limit_accepts_exact_size(tmp_path, monkeypatch):
+    import app.archive as archive
+
+    input_zip = write_zip(tmp_path / "in.zip", {"a.jpg": make_jpg_bytes()})
+    monkeypatch.setattr(archive, "MAX_INPUT_BYTES", input_zip.stat().st_size)
+    process_archive(input_zip, tmp_path / "out.zip", Stub(), None, 0.15)
+
+
+def test_uncompressed_limit_accepts_exact_size(tmp_path, monkeypatch):
+    import app.archive as archive
+
+    image = make_jpg_bytes()
+    input_zip = write_zip(tmp_path / "in.zip", {"a.jpg": image})
+    monkeypatch.setattr(archive, "MAX_TOTAL_UNCOMPRESSED", len(image))
+    process_archive(input_zip, tmp_path / "out.zip", Stub(), None, 0.15)
 
 
 def test_rejects_too_many_entries(tmp_path, monkeypatch):

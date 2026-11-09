@@ -233,3 +233,55 @@ del contrato.
   conjunto en Lightroom y evalúe los recortes según su criterio. Esta valida el
   flujo de uso real; no se afirma una inspección independiente de ese ZIP.
 - No quedan hallazgos abiertos. Estado de etapa: completada.
+
+### Corrección — una foto por nombre y límite de 5 GiB
+
+El usuario pidió reducir la duplicación del ZIP para facilitar la revisión de
+lotes grandes y ampliar la entrada a 5 GiB. Esta sección reemplaza el contrato
+anterior de salida; la evidencia histórica se conserva arriba.
+
+#### Implementación
+
+- `app/archive.py`: el empaquetado elige el resultado de `process_folder()` si
+  existe; en caso contrario incluye el original. Cada JPEG queda una vez bajo
+  su nombre original. Se elimina la comprobación de colisión `-crop`, que ya no
+  aplica. Los límites comprimido y descomprimido pasan a 5 GiB.
+- `app/jobs.py`, `frontend/index.html`, `app/frontend.py`: límite de subida,
+  error 413, aviso y comentario del proxy actualizados a 5 GiB. `README.md` y
+  contratos V2-01/03/09/13 documentan límites y salida vigente.
+- Pruebas primero: pruebas focales modificadas ejecutadas antes del código;
+  fallaron por la duplicación, la colisión `-crop` y límites/textos de 2 GiB.
+- `.venv/bin/pytest -q tests/test_archive.py tests/test_archive_report.py`
+  más tests focales de límite/UI → `36 passed, 1 skipped`.
+- `.venv/bin/pytest -q` → cuatro fallos ajenos a este cambio: pruebas de
+  puertos Compose esperan que solo `api` y `frontend` publiquen puertos, pero el
+  `compose.yaml` ya tenía un cambio del usuario que publica `rustfs` en
+  `127.0.0.1:9000`. No se modificó ese archivo.
+- Suite completa excluyendo únicamente esos cuatro checks de Compose:
+  `.venv/bin/pytest -q -k 'not test_f2_only_api_publishes_loopback_port and
+  not test_t1_loopback_ports_and_no_host_network and not
+  test_t1_compose_runs_frontend_and_api_separately_on_loopback and not
+  test_v210_compose_publishes_only_loopback'` → `636 passed, 1 skipped`.
+- `.venv/bin/python -m pip check` → `No broken requirements found`.
+- `git diff --check` → limpio.
+
+#### Revisión
+
+- ZIP mixto, todo guardado y todo en revisión cubiertos; reporte mantiene sus
+  filas/motivos/enlaces y los originales de revisión se verifican byte a byte.
+- Límites exactos comprimido/descomprimido cubiertos con límites reducidos en
+  tests; constantes verificadas como 5 GiB. No se creó un ZIP de 5 GiB ni se
+  levantaron contenedores.
+- Pendiente: resolver los cuatro checks Compose cuando se revise el cambio local
+  de `compose.yaml`; etapa permanece en revisión.
+
+#### Revisión final y cierre
+
+- El usuario confirmó que la publicación local del puerto RustFS en
+  `compose.yaml` era temporal y pidió quitarla; se retiró esa modificación.
+- Suite completa: `.venv/bin/pytest -q` → `640 passed, 1 skipped`.
+- `.venv/bin/python -m pip check` → `No broken requirements found`;
+  `git diff --check` → limpio.
+- F1–F5 y T1–T2 verificados en tests focales y suite completa. No se levantaron
+  contenedores ni se generaron archivos ZIP de 5 GiB. Sin hallazgos pendientes;
+  etapa completada.

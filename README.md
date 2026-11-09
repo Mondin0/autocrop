@@ -251,9 +251,9 @@ al activarlo conserva sus montajes y comportamiento existentes.
 - Docker Engine y el plugin Docker Compose.
 - El checkout del repositorio con `yolo11n.pt` en la raíz. El build copia
   ese archivo a la imagen y no descarga pesos.
-- Un ZIP de hasta 2 GiB con uno o más JPEG en la raíz. El procesador rechaza
-  JPEG anidados y aplica también límites de cantidad y tamaño descomprimido
-  descritos en [V2-01](.plans/v2/01-zip-seguro/plan.md).
+- Un ZIP de hasta 5 GiB con uno o más JPEG en la raíz. El procesador rechaza
+  JPEG anidados y aplica también límites de cantidad y hasta 5 GiB de tamaño
+  descomprimido descritos en [V2-01](.plans/v2/01-zip-seguro/plan.md).
 
 La demo V2 no necesita `.env` ni carpetas `fotos/` u `output/` en el host:
 el arranque predeterminado levanta solo frontend, API, worker, Redis y
@@ -270,7 +270,9 @@ docker compose up -d --build
 docker compose ps
 ```
 
-Abre `http://localhost:8080`, selecciona el ZIP y envíalo. La página muestra
+Abre `http://localhost:8080`, selecciona el ZIP y envíalo. El ZIP resultante
+incluye una sola foto por nombre: el recorte si se guardó, o el original si
+quedó en revisión, más `reporte.html`. La página muestra
 el estado, la foto actual y los contadores que entrega la API. Al terminar,
 usa el enlace de descarga. Si un trabajo falla, la página muestra el error;
 puedes enviar otro ZIP sin reiniciar Compose.

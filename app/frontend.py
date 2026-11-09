@@ -59,7 +59,7 @@ def create_handler(api_base: str | None = None) -> Any:
             try:
                 parts = urlsplit(base)
                 length = int(self.headers.get("Content-Length") or 0)
-                # Las subidas (límite 2 GiB) tardan minutos en reenviarse y
+                # Las subidas (límite 5 GiB) tardan minutos en reenviarse y
                 # en obtener respuesta; sin cuerpo se conserva el corto.
                 proxy_timeout = 600 if length else 30
                 conn = http.client.HTTPConnection(

@@ -334,7 +334,7 @@ def test_t1_reuses_process_archive_with_real_engine(tmp_path):
     with zipfile.ZipFile(io.BytesIO(raw)) as zf:
         names = zf.namelist()
     assert "review/" not in names
-    assert "a-crop.jpg" in names
+    assert "a.jpg" in names and "a-crop.jpg" not in names
     assert "b.jpg" in names
     assert any(n.endswith(".jpg") for n in names if not n.endswith("/"))
 

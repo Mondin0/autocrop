@@ -75,10 +75,10 @@ def build_mixed_zip(tmp_path):
     return sizes, saved, payloads, stub, src
 
 
-# --- F1: originals and crops together at the ZIP root ------------------------
+# --- F1: one photo per original name at the ZIP root -------------------------
 
 
-def test_mixed_batch_keeps_originals_bytes_and_existing_outputs(tmp_path):
+def test_mixed_batch_keeps_crop_or_review_original_once(tmp_path):
     sizes, _saved, payloads, stub, src = build_mixed_zip(tmp_path)
     before = src.read_bytes()
     out = tmp_path / "out.zip"
@@ -89,14 +89,15 @@ def test_mixed_batch_keeps_originals_bytes_and_existing_outputs(tmp_path):
     with zipfile.ZipFile(out) as zf:
         listed = zf.namelist()
         files = {n: zf.read(n) for n in listed if not n.endswith("/")}
-        assert {"reporte.html", "foto <b>&\"sol\" 'playa'-crop.jpg",
-                "originals.jpg"} <= set(listed)
+        assert {"reporte.html", *sizes} == set(listed)
         for name in sizes:
             assert listed.count(name) == 1
-            assert files[name] == payloads[name]
+            if name in _saved:
+                assert files[name] != payloads[name]
+            else:
+                assert files[name] == payloads[name]
         assert "review/" not in listed and "review.log" not in listed
         assert "review/reporte.html.jpg" not in listed
-        assert "foto <b>&\"sol\" 'playa'-crop.jpg" in files
         assert listed == sorted(listed)
 
 
@@ -161,8 +162,8 @@ def test_all_saved_batch_links_every_crop_and_never_review(tmp_path):
     assert "Fotos con fallas o en revisión: 0." in report
     assert report_cells(report, "foto") == []
     assert report_cells(report, "motivo") == []
-    assert {"a.jpg", "a-crop.jpg", "b.jpg", "b-crop.jpg",
-            "c.jpg", "c-crop.jpg"} <= set(files)
+    assert {"a.jpg", "b.jpg", "c.jpg", "reporte.html"} == set(files)
+    assert all(files[name] != payloads[name] for name in payloads)
 
 
 def test_all_review_batch_links_review_copy_and_reason(tmp_path):
@@ -252,7 +253,10 @@ def test_names_that_resemble_reserved_outputs_do_not_collide(tmp_path):
         files = {n: zf.read(n) for n in listed if not n.endswith("/")}
     assert len(listed) == len(set(listed))
     for name in names:
-        assert files[name] == payloads[name]
+        if name in {"originals.jpg", "reporte.html.jpg"}:
+            assert files[name] != payloads[name]
+        else:
+            assert files[name] == payloads[name]
     assert files["reporte.html"].startswith(b"<!DOCTYPE html>")
     report = files["reporte.html"].decode("utf-8")
     for href in report_hrefs(report):
@@ -262,17 +266,18 @@ def test_names_that_resemble_reserved_outputs_do_not_collide(tmp_path):
         if name not in {"originals.jpg", "reporte.html.jpg"}]
 
 
-def test_rejects_crop_name_collision_before_processing(tmp_path):
+def test_crop_uses_original_name_without_extra_collision(tmp_path):
     src = write_zip(tmp_path / "in.zip", {
         "foto.jpg": make_jpg_bytes(800, 600),
         "foto-crop.jpg": make_jpg_bytes(640, 480),
     })
     out = tmp_path / "out.zip"
-    with pytest.raises(ValueError, match="crop name collision"):
-        process_archive(src, out, Stub({
-            (800, 600): [(100, 100, 300, 300)],
-        }), None, 0.15)
-    assert not out.exists()
+    process_archive(src, out, Stub({
+        (800, 600): [(100, 100, 300, 300)],
+    }), None, 0.15)
+    files = zip_files(out)
+    assert set(files) == {"foto.jpg", "foto-crop.jpg", "reporte.html"}
+    assert files["foto.jpg"] != zip_files(src)["foto.jpg"]
 
 
 # --- F4: no partial ZIP when packaging fails --------------------------------
@@ -292,6 +297,7 @@ def test_packaging_failure_leaves_no_partial_zip(tmp_path, monkeypatch):
     def vanish_original(input_dir, output_dir, *args, **kwargs):
         summary = real_process_folder(input_dir, output_dir, *args, **kwargs)
         (input_dir / "a.jpg").unlink()
+        (output_dir / "a.jpg").unlink()
         return summary
 
     monkeypatch.setattr(archive, "process_folder", vanish_original)

@@ -90,8 +90,8 @@ def test_v210_isolated_override_uses_free_loopback_ports(tmp_path):
         pytest.fail(f"puerto {port} ocupado; debe estar libre")
 
 
-def test_v210_proxy_upload_timeout_supports_2gib(monkeypatch):
-    """El proxy debe tolerar subidas de 2 GiB (medido: 113s solo API).
+def test_v210_proxy_upload_timeout_supports_large_uploads(monkeypatch):
+    """El proxy debe tolerar subidas grandes (límite de 5 GiB).
 
     Sin red ni ZIP gigante: se stubea HTTPConnection y se captura el
     timeout usado al proxear un POST con cuerpo.
@@ -177,8 +177,9 @@ def test_v210_isolated_override_uniquifies_all_container_names(tmp_path):
 
 
 def test_v210_upload_limit_constants():
-    assert jobs_mod.MAX_UPLOAD_BYTES == 2 * 1024 * 1024 * 1024 == 2147483648
-    assert archive.MAX_INPUT_BYTES == 2 * 1024 * 1024 * 1024 == 2147483648
+    assert jobs_mod.MAX_UPLOAD_BYTES == 5 * 1024 * 1024 * 1024 == 5368709120
+    assert archive.MAX_INPUT_BYTES == 5 * 1024 * 1024 * 1024 == 5368709120
+    assert archive.MAX_TOTAL_UNCOMPRESSED == 5 * 1024 * 1024 * 1024
     assert jobs_mod.RESULT_TTL_SECONDS == 3 * 3600
 
 
@@ -202,9 +203,9 @@ def test_v210_limit_boundary_exact_accepts_plus_one_rejects():
     assert len(svc.state.ids()) == 2  # solo los dos exactos aceptados
 
 
-def test_v210_frontend_states_2gib_limit():
+def test_v210_frontend_states_5gib_limit():
     text = (ROOT / "frontend" / "index.html").read_text(encoding="utf-8")
-    assert "2 GiB" in text
+    assert "5 GiB" in text
     assert "500 MiB" not in text
 
 

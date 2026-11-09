@@ -134,12 +134,13 @@ def test_archive_keeps_interfaces_and_reports_new_reason(tmp_path):
     assert summary == {"processed": 2, "saved": 1, "review": 1, "skipped": 0}
     with zipfile.ZipFile(output_zip) as zf:
         names = set(zf.namelist())
-        assert {"team.jpg", "team-crop.jpg", "doubt.jpg"} <= names
+        assert {"team.jpg", "doubt.jpg"} <= names
+        assert "team-crop.jpg" not in names
         assert not any(name.startswith("review/") for name in names)
         assert "review.log" not in names
         assert not any(name.startswith("review/team") for name in names)
         assert b"ambiguous_subject" in zf.read("reporte.html")
-        with zf.open("team-crop.jpg") as handle, Image.open(handle) as crop:
+        with zf.open("team.jpg") as handle, Image.open(handle) as crop:
             width, height = crop.size
     assert width * 2 == height * 3
     assert not output_zip.with_suffix(".tmp").exists()

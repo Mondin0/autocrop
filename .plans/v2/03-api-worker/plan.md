@@ -12,7 +12,7 @@ Permitir que un cliente local cree un trabajo de procesamiento de ZIP, consulte 
 
 ## Contrato y decisiones
 
-- FastAPI expone `POST /api/jobs` con un archivo multipart llamado `file`. Acepta un ZIP de hasta 500 MiB medidos mientras se recibe; si supera el límite, devuelve HTTP 413 y descarta el temporal de entrada. La carga se escribe en temporal/almacenamiento por bloques, sin mantener el archivo completo en memoria. La llamada válida devuelve HTTP 202 con `{ "job_id": "<uuid>", "status": "queued" }` y encola el trabajo. La validación de contenido ZIP ocurre en el worker mediante `process_archive()`; los ZIP inválidos terminan como trabajos `failed` con un mensaje legible.
+- FastAPI expone `POST /api/jobs` con un archivo multipart llamado `file`. Acepta un ZIP de hasta 5 GiB medidos mientras se recibe; si supera el límite, devuelve HTTP 413 y descarta el temporal de entrada. La carga se escribe en temporal/almacenamiento por bloques, sin mantener el archivo completo en memoria. La llamada válida devuelve HTTP 202 con `{ "job_id": "<uuid>", "status": "queued" }` y encola el trabajo. La validación de contenido ZIP ocurre en el worker mediante `process_archive()`; los ZIP inválidos terminan como trabajos `failed` con un mensaje legible.
 - `GET /api/jobs/{job_id}` devuelve HTTP 200 y `{job_id, status, current, processed, total, saved, review, error}`. `status` es `queued`, `processing`, `completed` o `failed`; `current` es el JPEG en curso o `null`; los contadores son enteros no negativos y cumplen `processed == saved + review` y `processed <= total`. `error` es `null` salvo en estado `failed`. Un id desconocido devuelve HTTP 404.
 - Un worker procesa un trabajo a la vez en orden de encolado. Al iniciarlo cambia el estado a `processing`; actualiza el estado consultable con cada callback de progreso de V2-02; al terminar publica el ZIP y marca `completed`. Errores de validación o procesamiento marcan `failed`, con mensaje legible y sin ZIP parcial descargable.
 - `GET /api/jobs/{job_id}/result` devuelve el ZIP final con HTTP 200 solo cuando el trabajo está `completed` y no venció. En estados `queued` o `processing` devuelve HTTP 409; en `failed` devuelve HTTP 409; vencido devuelve HTTP 410; id desconocido devuelve HTTP 404.
@@ -22,7 +22,7 @@ Permitir que un cliente local cree un trabajo de procesamiento de ZIP, consulte 
 
 ## Criterios
 
-- **F1:** crear trabajo válido devuelve 202 con UUID, estado `queued` y encola el archivo; archivo mayor a 500 MiB devuelve 413.
+- **F1:** crear trabajo válido devuelve 202 con UUID, estado `queued` y encola el archivo; archivo mayor a 5 GiB devuelve 413.
 - **F2:** el estado refleja cola, procesamiento, eventos V2-02 y resultado final; respeta invariantes de contadores y devuelve 404 para ids desconocidos.
 - **F3:** el worker procesa un trabajo a la vez, mantiene cada ZIP aislado y marca `completed` solo después de que el resultado completo esté disponible en RustFS.
 - **F4:** ZIP rechazado o fallo de procesamiento marca `failed` con error legible y no ofrece un resultado parcial.

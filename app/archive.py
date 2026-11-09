@@ -13,8 +13,8 @@ from urllib.parse import quote
 
 from app.processor import process_folder
 
-MAX_INPUT_BYTES = 2 * 1024 * 1024 * 1024
-MAX_TOTAL_UNCOMPRESSED = 2 * 1024 * 1024 * 1024
+MAX_INPUT_BYTES = 5 * 1024 * 1024 * 1024
+MAX_TOTAL_UNCOMPRESSED = 5 * 1024 * 1024 * 1024
 MAX_ENTRIES = 10_000
 
 _JPEG_SUFFIXES = frozenset({".jpg", ".jpeg"})
@@ -155,7 +155,7 @@ def process_archive(
     if not input_zip.is_file():
         raise ValueError(f"input is not a file: {input_zip}")
     if input_zip.stat().st_size > MAX_INPUT_BYTES:
-        raise _fail(f"input zip exceeds 2 GiB: {input_zip}")
+        raise _fail(f"input zip exceeds 5 GiB: {input_zip}")
 
     try:
         zf = zipfile.ZipFile(input_zip)
@@ -170,7 +170,7 @@ def process_archive(
             raise _fail(f"too many entries: {len(infos)}")
         declared = sum(max(0, i.file_size) for i in infos)
         if declared > MAX_TOTAL_UNCOMPRESSED:
-            raise _fail("uncompressed size exceeds 2 GiB")
+            raise _fail("uncompressed size exceeds 5 GiB")
         candidates = []
         for info in infos:
             if info.is_dir():
@@ -191,16 +191,6 @@ def process_archive(
             if key in seen:
                 raise _fail(f"duplicate name: {info.filename!r}")
             seen[key] = info.filename
-        crop_names = {
-            name: f"{pathlib.PurePosixPath(name).stem}-crop"
-                   f"{pathlib.PurePosixPath(name).suffix}"
-            for name in seen.values()
-        }
-        originals = {name.lower() for name in seen.values()}
-        for name, crop_name in crop_names.items():
-            if crop_name.lower() in originals:
-                raise _fail(f"crop name collision: {crop_name!r}")
-
         with tempfile.TemporaryDirectory() as in_tmp, \
                 tempfile.TemporaryDirectory() as out_tmp:
             in_dir = pathlib.Path(in_tmp)
@@ -218,7 +208,7 @@ def process_archive(
                                 written += len(chunk)
                                 if written > MAX_TOTAL_UNCOMPRESSED:
                                     raise _fail(
-                                        "uncompressed size exceeds 2 GiB")
+                                        "uncompressed size exceeds 5 GiB")
                                 fh.write(chunk)
                 except ValueError:
                     raise
@@ -236,9 +226,8 @@ def process_archive(
             photo_names = sorted(info.filename for info in candidates)
             entries: dict[str, pathlib.Path | bytes] = {}
             for name in photo_names:
-                entries[name] = in_dir / name
-                if (out_dir / name).is_file():
-                    entries[crop_names[name]] = out_dir / name
+                entries[name] = (out_dir / name if (out_dir / name).is_file()
+                                 else in_dir / name)
             reviewed = [name for name in photo_names
                         if not (out_dir / name).is_file()]
             entries[_REPORT_NAME] = _build_report(

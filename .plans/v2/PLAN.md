@@ -6,7 +6,7 @@ Un fotógrafo levanta Docker Compose en su computadora Linux, abre una página l
 
 ## Decisiones compartidas
 
-- Un ZIP de entrada de hasta 500 MiB contiene JPEG `.jpg`/`.jpeg` en su raíz. Se rechazan ZIP inválidos, sin JPEG o con JPEG dentro de subcarpetas. La extracción debe limitar el contenido real descomprimido a 2 GiB y evitar nombres peligrosos y colisiones.
+- Un ZIP de entrada de hasta 5 GiB contiene JPEG `.jpg`/`.jpeg` en su raíz. Se rechazan ZIP inválidos, sin JPEG o con JPEG dentro de subcarpetas. La extracción limita el contenido real descomprimido a 5 GiB y evita nombres peligrosos y colisiones.
 - El procesador existente en `app.processor.process_folder` es el motor de recorte. Los originales no se modifican; cada trabajo usa directorios temporales aislados.
 - La pantalla muestra trabajo en cola, foto actual, procesadas/total, guardadas y enviadas a revisión. Consulta el estado cada segundo; al finalizar habilita la descarga.
 - FastAPI sirve API y pantalla sencilla. Redis mantiene cola y estado; un worker procesa un trabajo a la vez. RustFS guarda temporalmente los ZIP de entrada y salida.
@@ -32,7 +32,7 @@ Un fotógrafo levanta Docker Compose en su computadora Linux, abre una página l
 
 12. [Selección automática de sujetos y formaciones](12-seleccion-fotografica/plan.md): preservar equipos y seleccionar protagonistas con evidencia visual en el motor compartido.
 
-13. [Originales y reporte en el ZIP](13-originales-y-reporte/plan.md): incluir los JPEG originales y un reporte HTML que los vincule con sus recortes o documente los motivos de revisión.
+13. [Fotos finales y reporte en el ZIP](13-originales-y-reporte/plan.md): conservar cada foto una sola vez con su nombre original (recortada si tuvo éxito, original si quedó en revisión) y agregar un reporte HTML.
 
 ## Ruta de cierre propuesta el 2026-10-14
 

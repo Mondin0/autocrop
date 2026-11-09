@@ -327,7 +327,7 @@ def test_t2_frontend_needs_no_heavy_services():
 
 # H1 (revisión del director) ------------------------------------------------
 # El proxy materializaba cuerpo completo (rfile.read(length) y resp.read()
-# + wfile.write(body)); V2-03 admite ZIP de hasta 500 MiB y exige bloques.
+# + wfile.write(body)); V2 admite ZIP de hasta 5 GiB y exige bloques.
 
 _MAX_BLOCK = 64 * 1024
 
